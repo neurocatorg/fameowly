@@ -8,6 +8,7 @@ import type {
   PricingPolicy,
   CostSnapshot,
   ModelAccessPolicy,
+  SpendingGuard,
   UserLifecycle,
 } from "../contracts";
 import type { ModelsConfig } from "../models";
@@ -31,6 +32,13 @@ export class OpenModelAccessPolicy implements ModelAccessPolicy {
 
   canUse(): boolean {
     return true;
+  }
+}
+
+/** No balances in OSS, so nothing is ever refused */
+export class OpenSpendingGuard implements SpendingGuard {
+  check(): string | null {
+    return null;
   }
 }
 

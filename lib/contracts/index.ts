@@ -8,6 +8,7 @@ export type { ModelFactory } from "./model-factory";
 export type { UsageTracker, ChatFinishContext } from "./usage-tracker";
 export type { PricingPolicy, CostSnapshot } from "./pricing-policy";
 export type { ModelAccessPolicy } from "./model-access-policy";
+export type { SpendingGuard } from "./spending-guard";
 export type { UserLifecycle } from "./user-lifecycle";
 export type {
   WebToolsProvider,

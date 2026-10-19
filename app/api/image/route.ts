@@ -90,6 +90,10 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    const spendingRefusal = container.get("spendingGuard").check(userId);
+    if (spendingRefusal) {
+      return NextResponse.json({ error: spendingRefusal }, { status: 402 });
+    }
 
     const credentials = container.get("providerResolver").resolve(modelId, modelInfo.provider, userRole)!;
 

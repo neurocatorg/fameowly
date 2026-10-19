@@ -12,6 +12,7 @@ import type {
   UsageTracker,
   PricingPolicy,
   ModelAccessPolicy,
+  SpendingGuard,
   UserLifecycle,
   WebToolsProvider,
   ReasoningOptionsProvider,
@@ -23,6 +24,7 @@ export interface ServiceMap {
   usageTracker: UsageTracker;
   pricingPolicy: PricingPolicy;
   modelAccessPolicy: ModelAccessPolicy;
+  spendingGuard: SpendingGuard;
   userLifecycle: UserLifecycle;
   webToolsProvider: WebToolsProvider;
   reasoningOptionsProvider: ReasoningOptionsProvider;

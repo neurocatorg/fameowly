@@ -5,7 +5,16 @@ const JWT_SECRET_KEY = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-change-me-please-32chars"
 );
 
-const publicPaths = ["/login", "/requisites", "/info/", "/api/auth/login", "/manifest.json", "/sw.js"];
+const publicPaths = [
+  "/login",
+  "/requisites",
+  "/info/",
+  "/api/auth/login",
+  // Acquirer webhook, authenticated by its own signature
+  "/api/payments/notify",
+  "/manifest.json",
+  "/sw.js",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

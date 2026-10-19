@@ -76,6 +76,8 @@ export async function POST(req: Request) {
     if (isArchivedModel(modelId) || !container.get("modelAccessPolicy").canUse(userId, modelId)) {
       return jsonError("Модель недоступна", 403);
     }
+    const spendingRefusal = container.get("spendingGuard").check(userId);
+    if (spendingRefusal) return jsonError(spendingRefusal, 402);
 
     const system = systemPrompt || DEFAULT_SYSTEM_PROMPT;
     const coreMessages = await buildCoreMessages(messages);

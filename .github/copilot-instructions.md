@@ -114,8 +114,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - **Public pages**: `publicPages` are server components for guests. Id `home` renders on `/`
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
   in `components/public/public-shell.tsx`; `footerLabel` adds a link to the public footer.
-- **DI Container** (`lib/container.ts`): eight strategy slots — `providerResolver`, `modelFactory`,
-  `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `userLifecycle`, `webToolsProvider`,
+- **DI Container** (`lib/container.ts`): nine strategy slots — `providerResolver`, `modelFactory`,
+  `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `spendingGuard`, `userLifecycle`, `webToolsProvider`,
   `reasoningOptionsProvider`.
   `lib/plugin-loader.ts` registers OSS defaults first; plugins override. Last register wins.
 - **Adding New Plugins** (no core files to edit):

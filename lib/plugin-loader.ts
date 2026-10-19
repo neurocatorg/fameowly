@@ -18,6 +18,7 @@ import { DefaultReasoningOptionsProvider } from "./strategies/default-reasoning-
 import {
   NoPricingPolicy,
   OpenModelAccessPolicy,
+  OpenSpendingGuard,
   NoopUserLifecycle,
 } from "./strategies/open-policies";
 import { plugins as extensionPlugins } from "@plugins";
@@ -38,6 +39,7 @@ export function initializeContainer(): void {
   container.register("usageTracker", new ChatTotalsUsageTracker());
   container.register("pricingPolicy", new NoPricingPolicy());
   container.register("modelAccessPolicy", new OpenModelAccessPolicy());
+  container.register("spendingGuard", new OpenSpendingGuard());
   container.register("userLifecycle", new NoopUserLifecycle());
   container.register("webToolsProvider", new GoogleWebToolsProvider());
   container.register("reasoningOptionsProvider", new DefaultReasoningOptionsProvider());
