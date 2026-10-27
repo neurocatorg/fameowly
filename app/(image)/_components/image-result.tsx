@@ -1,5 +1,6 @@
 import { Download, Sparkles, Trash2 } from "lucide-react";
 import type { ImageHistoryItemClient } from "@/lib/types";
+import { imageVariantUrl } from "@/lib/image-variant-url";
 
 interface ImageResultProps {
   item: ImageHistoryItemClient;
@@ -10,15 +11,18 @@ interface ImageResultProps {
 
 /** Display a generated image with metadata, ref files, and actions */
 export function ImageResult({ item, onPreview, onDelete, onNewGeneration }: ImageResultProps) {
+  // The original (up to ~25 MB PNG) is only fetched by «Скачать»
+  const viewUrl = imageVariantUrl(item.imageUrl!, "view");
   return (
     <>
       <div className="overflow-hidden rounded-xl border border-th-border">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={item.imageUrl!}
+          src={viewUrl}
           alt={item.prompt}
+          decoding="async"
           className="w-full cursor-pointer transition hover:opacity-90"
-          onClick={() => onPreview(item.imageUrl)}
+          onClick={() => onPreview(viewUrl)}
         />
         <div className="border-t border-th-border bg-th-panel/50 px-4 py-3">
           <p className="text-sm text-th-fg-s whitespace-pre-wrap leading-relaxed">
@@ -33,14 +37,16 @@ export function ImageResult({ item, onPreview, onDelete, onNewGeneration }: Imag
                 ref.mimeType.startsWith("image/") ? (
                   <button
                     key={i}
-                    onClick={() => onPreview(ref.url)}
+                    onClick={() => onPreview(imageVariantUrl(ref.url, "view"))}
                     className="group/ref relative cursor-pointer"
                     title={ref.name}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={ref.url}
+                      src={imageVariantUrl(ref.url, "thumb")}
                       alt={ref.name}
+                      loading="lazy"
+                      decoding="async"
                       className="h-12 w-12 rounded-lg object-cover border border-th-border-s transition group-hover/ref:border-th-accent group-hover/ref:opacity-80"
                     />
                   </button>

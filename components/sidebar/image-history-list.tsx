@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ImageIcon, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ImageHistoryItemClient } from "@/lib/types";
+import { imageVariantUrl } from "@/lib/image-variant-url";
 import { useScrollRunway } from "@/hooks/use-scroll-runway";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -107,7 +108,13 @@ export function ImageHistoryList({
             >
               {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                <img
+                  src={imageVariantUrl(item.imageUrl, "thumb")}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-th-muted">
                   <ImageIcon className="h-4 w-4 text-th-fg-f" />

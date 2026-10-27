@@ -6,7 +6,8 @@ import { verifySession } from "@/lib/auth";
 import { readModelsConfig, withoutArchived, isArchivedModel } from "@/lib/models.server";
 import { initializeContainer, container } from "@/lib/plugin-loader";
 import { proxyFetch } from "@/lib/proxy-fetch";
-import { resizeToTarget } from "@/lib/image-resize";
+import { storeGeneratedImage } from "@/lib/generated-image";
+import { ASPECT_RATIOS, RESOLUTIONS } from "@/lib/constants/image-options";
 import { resolveFileUrl } from "@/lib/file-storage";
 import { getVertexAccessToken } from "@/lib/providers/vertex-auth";
 import {
@@ -27,6 +28,7 @@ async function getUserId(request: NextRequest): Promise<string | null> {
 }
 
 export async function POST(req: NextRequest) {
+  const startedAt = Date.now();
   const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
@@ -137,12 +139,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Build parts (text + optional reference files)
-      // Include aspect ratio hint in the prompt for Gemini
-      let enrichedPrompt = prompt;
-      if (aspectRatio && aspectRatio !== "1:1") {
-        enrichedPrompt = `${prompt}\n\n[Image aspect ratio: ${aspectRatio}]`;
-      }
-      const parts: Array<Record<string, unknown>> = [{ text: enrichedPrompt }];
+      const parts: Array<Record<string, unknown>> = [{ text: prompt }];
 
       if (referenceFiles?.length) {
         for (const refFile of referenceFiles as Array<{ url: string; name: string; mimeType: string; type: string }>) {
@@ -163,6 +160,12 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Models without native imageSize support still honour aspectRatio (verified 2026-10-27)
+      const imageConfig: Record<string, string> = {};
+      if (ASPECT_RATIOS.some((a) => a.id === aspectRatio)) imageConfig.aspectRatio = aspectRatio;
+      if (RESOLUTIONS.some((r) => r.id === resolution)) imageConfig.imageSize = resolution;
+
+      const upstreamStartedAt = Date.now();
       const response = await proxyFetch(endpoint, {
         method: "POST",
         headers,
@@ -170,13 +173,14 @@ export async function POST(req: NextRequest) {
           contents: [{ role: "user", parts }],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
+            imageConfig,
           },
         }),
       });
 
       if (!response.ok) {
         const errBody = await response.text();
-        console.error("Google image generation error:", errBody);
+        console.error(`Google image generation error (${Date.now() - upstreamStartedAt}ms, ${modelId}):`, errBody);
         let errorMsg = "Ошибка генерации изображения";
         try {
           const errJson = JSON.parse(errBody);
@@ -195,7 +199,10 @@ export async function POST(req: NextRequest) {
       }
 
       const data = await response.json();
-      const resParts = data?.candidates?.[0]?.content?.parts;
+      const upstreamMs = Date.now() - upstreamStartedAt;
+      // gemini-3-pro-image first returns reasoning and a 1K draft as `thought` parts
+      const resParts = (data?.candidates?.[0]?.content?.parts as Array<Record<string, unknown>> | undefined)
+        ?.filter((p) => !p.thought);
 
       if (!resParts || resParts.length === 0) {
         historyItem.error = "Модель не вернула ответ";
@@ -218,23 +225,15 @@ export async function POST(req: NextRequest) {
           data: string;
         };
 
-        // Optionally resize to target resolution
-        let finalB64 = b64;
-        let finalMime = mimeType;
-        if (targetLongestSide > 0) {
-          try {
-            const buf = Buffer.from(b64, "base64");
-            const resized = await resizeToTarget(buf, targetLongestSide);
-            finalB64 = resized.toString("base64");
-            finalMime = "image/png";
-          } catch {
-            // Keep original on resize failure
-          }
-        }
-
-        // Save to disk instead of returning base64
-        const imageUrl = saveGeneratedImage(finalB64, finalMime);
+        const stored = await storeGeneratedImage(b64, mimeType, targetLongestSide);
+        const imageUrl = stored.imageUrl;
         historyItem.imageUrl = imageUrl;
+        console.log(
+          `[image] user=${userId} model=${modelId} size=${historyItem.resolution} ar=${historyItem.aspectRatio}` +
+            ` refs=${referenceFiles?.length ?? 0} upstream=${upstreamMs}ms resize=${stored.resizeMs}ms` +
+            ` out=${stored.width}x${stored.height}${stored.upscaled ? "(upscaled)" : ""}` +
+            ` bytes=${stored.bytes} total=${Date.now() - startedAt}ms`
+        );
 
         const textPart = resParts.find(
           (p: Record<string, unknown>) => typeof p.text === "string"

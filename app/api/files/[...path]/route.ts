@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
 import { MIME_TYPES } from "@/lib/file-storage";
 import { DATA_DIR } from "@/lib/paths";
+import { hasImageVariants, isImageVariant } from "@/lib/image-variant-url";
+import { ensureImageVariant } from "@/lib/image-variants";
 import fs from "fs";
 import path from "path";
 
@@ -46,16 +48,36 @@ export async function GET(
     return NextResponse.json({ error: "Файл не найден" }, { status: 404 });
   }
 
-  const ext = path.extname(resolved).toLowerCase();
+  let filePath = resolved;
+  const variant = request.nextUrl.searchParams.get("v");
+  if (isImageVariant(variant) && hasImageVariants(resolved)) {
+    try {
+      filePath = await ensureImageVariant(resolved, variant);
+    } catch (err) {
+      console.error("[files] variant failed, serving original:", relativePath, err);
+    }
+  }
+
+  // Stored names are UUIDs or content hashes, so a URL never changes its bytes
+  const stat = fs.statSync(filePath);
+  const cacheHeaders = {
+    ETag: `W/"${stat.size.toString(36)}-${Math.floor(stat.mtimeMs).toString(36)}"`,
+    "Cache-Control": "private, max-age=31536000, immutable",
+  };
+  if (request.headers.get("if-none-match") === cacheHeaders.ETag) {
+    return new NextResponse(null, { status: 304, headers: cacheHeaders });
+  }
+
+  const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
-  const buffer = fs.readFileSync(resolved);
+  const buffer = fs.readFileSync(filePath);
 
   return new NextResponse(buffer, {
     status: 200,
     headers: {
+      ...cacheHeaders,
       "Content-Type": contentType,
       "Content-Length": String(buffer.length),
-      "Cache-Control": "private, max-age=86400",
     },
   });
 }

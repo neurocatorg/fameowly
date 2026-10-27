@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { DATA_DIR } from "./paths";
+import { externalizeAttachments } from "./file-storage";
+import { deleteImageVariants } from "./image-variants";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -41,12 +43,19 @@ function getUserHistoryFile(userId: string): string {
 export function getImageHistory(userId: string): ImageHistoryItem[] {
   const filePath = getUserHistoryFile(userId);
   if (!fs.existsSync(filePath)) return [];
+  let history: ImageHistoryItem[];
   try {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(raw) as ImageHistoryItem[];
+    history = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ImageHistoryItem[];
   } catch {
     return [];
   }
+  // Legacy items inlined reference images, bloating every history fetch to megabytes
+  if (externalizeReferenceFiles(history, userId)) saveHistory(userId, history);
+  return history;
+}
+
+function externalizeReferenceFiles(items: ImageHistoryItem[], userId: string): boolean {
+  return externalizeAttachments(items.map((item) => ({ attachments: item.referenceFiles })), userId);
 }
 
 function saveHistory(userId: string, history: ImageHistoryItem[]): void {
@@ -60,6 +69,7 @@ export function addImageHistoryItem(
   item: ImageHistoryItem
 ): void {
   const history = getImageHistory(userId);
+  externalizeReferenceFiles([item], userId);
   history.unshift(item);
   saveHistory(userId, history);
 }
@@ -80,6 +90,7 @@ export function deleteImageHistoryItem(
     const filePath = path.join(UPLOADS_DIR, relativePath);
     try {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      deleteImageVariants(filePath);
     } catch {
       /* ignore */
     }

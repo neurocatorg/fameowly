@@ -64,6 +64,14 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   in JSON`). `chat-store` moves legacy inline attachments to disk on read and on write.
 - **File security**: files are stored in `data/uploads/{userId}/`, 
   access is verified by `userId` from the session.
+- **Generated images**: `/api/image` passes `imageConfig.{aspectRatio,imageSize}` to Gemini and
+  upscales locally only when the model ignores `imageSize`. Response parts flagged `thought`
+  are skipped: gemini-3-pro-image sends a 1K draft image there before the final one.
+  Originals reach 25 MB, so the UI never shows them: `imageVariantUrl(url, "thumb" | "view")`
+  → `/api/files/...?v=` serves a WebP (256 / 2048 px) rendered once by `lib/image-variants.ts`
+  and stored next to the original. Only «Скачать» fetches the original. Stored file names are
+  UUIDs or content hashes, so `/api/files` responds `immutable` + `ETag`.
+  `image-store` moves legacy inline `data:` reference images to disk on read and on write.
 - **Web tools**: two mechanisms behind one `webToolsProvider` slot. `resolve()` returns
   `tools` for `streamText()` — provider-native for Google/Vertex (they share the same tool
   factories: `@ai-sdk/google-vertex` re-exports them from `@ai-sdk/google`, so one OSS strategy
