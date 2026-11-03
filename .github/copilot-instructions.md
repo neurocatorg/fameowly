@@ -203,6 +203,8 @@ default) are not breaking. Say so explicitly, so the distinction stays visible.
 - `npm run build` — production build  
 - `npm run build:os` — production build (open-source mode, `ENABLE_PLUGINS=false`)
 - `docker compose up -d` — Docker deployment
+- `scripts/deploy-image.sh [user@host]` — build the premium image from `HEAD` locally; with a host,
+  ship it over SSH as `fameowly-premium:local` and run the host's `deploy.sh` (no registry needed)
 
 Runtime data lives in `DATA_DIR` (default `./data`). OSS runs use a separate
 directory so they never corrupt premium data.

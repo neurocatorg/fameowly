@@ -66,6 +66,10 @@ services:
 
 `data/`, `data-oss/` and `.env*` are excluded from the build context by `.dockerignore`, so a locally built image never contains users, chats or credentials — they are supplied at run time through the volume and `env_file`.
 
+### Building without a registry
+
+`scripts/deploy-image.sh` builds the premium image (it needs the `extensions` submodule) from the committed `HEAD`. Uncommitted changes are left out. Without arguments it only builds `fameowly-premium:sha-<commit>`. With `user@host` it streams the image over SSH, tags it `fameowly-premium:local`, runs `$DEPLOY_DIR/deploy.sh fameowly` (default `/opt/fameowly`) and keeps the newest `KEEP_IMAGES` (default 3) `sha-*` tags on the host for rollback. The host's compose service must use `image: fameowly-premium:local` with `pull_policy: never`.
+
 ### Environment
 
 ```env
