@@ -67,6 +67,10 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   Binary files stay in `DATA_DIR/uploads/`. The legacy layout is converted once by
   `scripts/migrate-legacy-layout.mjs`; there is no conversion at startup, and the server
   refuses to seed the default admin next to an unmigrated `users.json`.
+  A plugin may replace the backend through the same slot; any backend must pass
+  `runDocumentStoreChecks()` from `scripts/document-store-checks.ts` (the file runner is
+  `scripts/check-document-store.ts`). Transaction callbacks may be re-run by such a backend,
+  so they must not have side effects outside the store.
 - **File attachments**: the server resolves files from `data/uploads/` into base64/text
   before sending them to the LLM. The client does not send raw data.
   Uploads are never inlined as `data:` URLs — the client resends the whole history on
