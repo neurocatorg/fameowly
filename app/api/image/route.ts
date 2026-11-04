@@ -18,6 +18,10 @@ import type { ImageHistoryItem } from "@/lib/image-store";
 
 export const maxDuration = 120;
 
+const IMAGE_SYSTEM_INSTRUCTION =
+  "You are an image generator. Always answer with an image that depicts the request; " +
+  "never ask questions or reply with text only.";
+
 const COOKIE_NAME = "session";
 
 async function getUserId(request: NextRequest): Promise<string | null> {
@@ -170,6 +174,8 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers,
         body: JSON.stringify({
+          // Without it gemini-3.1-flash-image ends vague prompts with finishReason NO_IMAGE (4/4 vs 0/4, 2026-11-04)
+          systemInstruction: { parts: [{ text: IMAGE_SYSTEM_INSTRUCTION }] },
           contents: [{ role: "user", parts }],
           generationConfig: {
             // With TEXT allowed, gemini-3.1-flash-image may answer vague prompts with text only
@@ -206,10 +212,13 @@ export async function POST(req: NextRequest) {
         ?.filter((p) => !p.thought);
 
       if (!resParts || resParts.length === 0) {
-        historyItem.error = "Модель не вернула ответ";
+        const finishReason = data?.candidates?.[0]?.finishReason ?? data?.promptFeedback?.blockReason;
+        console.error(`[image] empty response model=${modelId} finishReason=${finishReason ?? "none"}`);
+        const errMsg = finishReason ? `Модель не вернула ответ (${finishReason})` : "Модель не вернула ответ";
+        historyItem.error = errMsg;
         await addImageHistoryItem(userId, historyItem);
         return NextResponse.json(
-          { error: "Модель не вернула ответ", historyItem },
+          { error: errMsg, historyItem },
           { status: 500 }
         );
       }
