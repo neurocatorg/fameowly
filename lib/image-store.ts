@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { DATA_DIR } from "./paths";
+import type { Collection } from "./contracts/document-store";
+import { getDocumentStore } from "./storage/db";
 import { externalizeAttachments } from "./file-storage";
 import { deleteImageVariants } from "./image-variants";
 
@@ -22,7 +24,6 @@ export interface ImageHistoryItem {
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
-const IMAGES_DIR = path.join(DATA_DIR, "images");
 const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 
 function ensureDir(dir: string) {
@@ -31,60 +32,54 @@ function ensureDir(dir: string) {
   }
 }
 
-function getUserHistoryFile(userId: string): string {
-  const dir = path.join(IMAGES_DIR, userId);
-  ensureDir(dir);
-  return path.join(dir, "history.json");
+type StoredImageItem = ImageHistoryItem & { userId: string };
+
+function history(): Collection<StoredImageItem> {
+  return getDocumentStore().collection<StoredImageItem>("image_history", {
+    indexes: [{ fields: ["userId"] }],
+  });
+}
+
+function toItem(doc: StoredImageItem): ImageHistoryItem {
+  const item: Partial<StoredImageItem> = { ...doc };
+  delete item.userId;
+  return item as ImageHistoryItem;
 }
 
 // ─── CRUD Operations ─────────────────────────────────────────────────
 
 /** Get all image generation history for a user (newest first) */
-export function getImageHistory(userId: string): ImageHistoryItem[] {
-  const filePath = getUserHistoryFile(userId);
-  if (!fs.existsSync(filePath)) return [];
-  let history: ImageHistoryItem[];
-  try {
-    history = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ImageHistoryItem[];
-  } catch {
-    return [];
+export async function getImageHistory(userId: string): Promise<ImageHistoryItem[]> {
+  const items = await history().find({ userId }, { sort: { createdAt: -1 } });
+  for (const item of items) {
+    // Legacy items inlined reference images, bloating every history fetch to megabytes
+    if (externalizeReferenceFiles([item], userId)) await history().upsert(item);
   }
-  // Legacy items inlined reference images, bloating every history fetch to megabytes
-  if (externalizeReferenceFiles(history, userId)) saveHistory(userId, history);
-  return history;
+  return items.map(toItem);
 }
 
 function externalizeReferenceFiles(items: ImageHistoryItem[], userId: string): boolean {
   return externalizeAttachments(items.map((item) => ({ attachments: item.referenceFiles })), userId);
 }
 
-function saveHistory(userId: string, history: ImageHistoryItem[]): void {
-  const filePath = getUserHistoryFile(userId);
-  fs.writeFileSync(filePath, JSON.stringify(history, null, 2));
-}
-
-/** Add a new item to the beginning of history */
-export function addImageHistoryItem(
+/** Add a new item to the history */
+export async function addImageHistoryItem(
   userId: string,
   item: ImageHistoryItem
-): void {
-  const history = getImageHistory(userId);
+): Promise<void> {
   externalizeReferenceFiles([item], userId);
-  history.unshift(item);
-  saveHistory(userId, history);
+  await history().upsert({ ...item, userId });
 }
 
 /** Delete an item from history and its image file */
-export function deleteImageHistoryItem(
+export async function deleteImageHistoryItem(
   userId: string,
   itemId: string
-): boolean {
-  const history = getImageHistory(userId);
-  const idx = history.findIndex((h) => h.id === itemId);
-  if (idx === -1) return false;
+): Promise<boolean> {
+  const item = await history().get(itemId);
+  if (item?.userId !== userId) return false;
 
   // Delete the image file if stored on disk
-  const item = history[idx];
   if (item.imageUrl && item.imageUrl.startsWith("/api/files/")) {
     const relativePath = item.imageUrl.replace("/api/files/", "");
     const filePath = path.join(UPLOADS_DIR, relativePath);
@@ -96,9 +91,7 @@ export function deleteImageHistoryItem(
     }
   }
 
-  history.splice(idx, 1);
-  saveHistory(userId, history);
-  return true;
+  return history().delete(itemId);
 }
 
 // ─── Image File Storage ──────────────────────────────────────────────

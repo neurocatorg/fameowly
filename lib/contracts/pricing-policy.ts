@@ -18,6 +18,6 @@ export interface CostSnapshot {
 }
 
 export interface PricingPolicy {
-  chatCost(userId: string, modelId: string, usage: TokenUsage): CostSnapshot | null;
-  imageCost(userId: string, modelId: string): CostSnapshot | null;
+  chatCost(userId: string, modelId: string, usage: TokenUsage): Promise<CostSnapshot | null>;
+  imageCost(userId: string, modelId: string): Promise<CostSnapshot | null>;
 }

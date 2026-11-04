@@ -41,8 +41,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - api/ # API routes (chat, image, upload, auth, etc.)
 - hooks/ # Custom React hooks (UI business logic)
 - components/ # Shared UI components (sidebar, chat-message, etc.); `public/` = guest page frame + footer
-- lib/ # Server & shared utilities, types, domain logic
-- data/ # Runtime data (users.json, chats/, uploads/)
+- lib/ # Server & shared utilities, types, domain logic; `storage/` = document store (file backend)
+- data/ # Runtime data: `db/<collection>/<id>.json` (users, chats, image_history, settings), `uploads/`
 - extensions/ # Git submodule with closed-source plugins (providers, billing, web, etc.)
 - searxng/ # SearXNG config (`settings.yml`) for the `searxng` docker-compose service
 
@@ -57,6 +57,16 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - **OpenRouter**: use `openrouter.chat(modelId)` (Chat Completions API),
   NOT `openrouter(modelId)` (Responses API is not supported).
 - **Auth**: JWT in httpOnly cookies, middleware for route protection.
+- **Storage**: every persistent document goes through the `documentStore` slot
+  (`lib/contracts/document-store.ts`): collections with a small filter language, atomic
+  `update` with `inc`, `transaction(fn)`. OSS default `lib/storage/` keeps one JSON file per
+  document under `DATA_DIR/db/`, writes via temp file + rename, serialises writes per collection
+  with mutexes kept on `globalThis` (Next.js may load a module once per bundle). Core stores
+  (`user-store`, `chat-store`, `image-store`, `models.server`, `provider-store`) and every
+  contract method that may read data are async. Read-modify-write runs inside `transaction`.
+  Binary files stay in `DATA_DIR/uploads/`. The legacy layout is converted once by
+  `scripts/migrate-legacy-layout.mjs`; there is no conversion at startup, and the server
+  refuses to seed the default admin next to an unmigrated `users.json`.
 - **File attachments**: the server resolves files from `data/uploads/` into base64/text
   before sending them to the LLM. The client does not send raw data.
   Uploads are never inlined as `data:` URLs — the client resends the whole history on
@@ -122,9 +132,9 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - **Public pages**: `publicPages` are server components for guests. Id `home` renders on `/`
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
   in `components/public/public-shell.tsx`; `footerLabel` adds a link to the public footer.
-- **DI Container** (`lib/container.ts`): nine strategy slots — `providerResolver`, `modelFactory`,
+- **DI Container** (`lib/container.ts`): ten strategy slots — `providerResolver`, `modelFactory`,
   `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `spendingGuard`, `userLifecycle`, `webToolsProvider`,
-  `reasoningOptionsProvider`.
+  `reasoningOptionsProvider`, `documentStore`.
   `lib/plugin-loader.ts` registers OSS defaults first; plugins override. Last register wins.
 - **Adding New Plugins** (no core files to edit):
   1. Create folder `extensions/plugins/{plugin}/`, implement `Plugin`, register in `extensions/index.ts`.

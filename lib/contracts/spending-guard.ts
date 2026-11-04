@@ -5,5 +5,5 @@
 
 export interface SpendingGuard {
   /** @returns a message for the user when the request must be refused, otherwise null */
-  check(userId: string): string | null;
+  check(userId: string): Promise<string | null>;
 }

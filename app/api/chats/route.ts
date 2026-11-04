@@ -27,13 +27,13 @@ export async function GET(request: NextRequest) {
   const chatId = request.nextUrl.searchParams.get("id");
 
   if (chatId) {
-    const chat = getChat(userId, chatId);
+    const chat = await getChat(userId, chatId);
     if (!chat)
       return NextResponse.json({ error: "Чат не найден" }, { status: 404 });
     return NextResponse.json({ chat });
   }
 
-  const chats = getUserChats(userId);
+  const chats = await getUserChats(userId);
   return NextResponse.json({ chats });
 }
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const chat = createChat(userId, modelId, title, systemPrompt);
+  const chat = await createChat(userId, modelId, title, systemPrompt);
   return NextResponse.json({ chat });
 }
 
@@ -75,7 +75,7 @@ export async function PATCH(request: NextRequest) {
 
   // Delete single message
   if (deleteMessageId) {
-    const chat = deleteMessage(userId, chatId, deleteMessageId);
+    const chat = await deleteMessage(userId, chatId, deleteMessageId);
     if (!chat)
       return NextResponse.json({ error: "Чат не найден" }, { status: 404 });
     return NextResponse.json({ chat });
@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest) {
   if (modelId !== undefined) updates.modelId = modelId;
   if (systemPrompt !== undefined) updates.systemPrompt = systemPrompt;
 
-  const chat = updateChat(userId, chatId, updates);
+  const chat = await updateChat(userId, chatId, updates);
   if (!chat)
     return NextResponse.json({ error: "Чат не найден" }, { status: 404 });
   return NextResponse.json({ chat });
@@ -109,7 +109,7 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const deleted = deleteChat(userId, chatId);
+  const deleted = await deleteChat(userId, chatId);
   if (!deleted)
     return NextResponse.json({ error: "Чат не найден" }, { status: 404 });
   return NextResponse.json({ success: true });

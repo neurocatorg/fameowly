@@ -1,140 +1,111 @@
 /**
- * Provider store — CRUD for virtual providers (data/providers.json)
- * and in-memory rotation state with periodic flush to disk.
+ * Provider store — CRUD for virtual providers and their key rotation state,
+ * both kept as singleton documents of the `settings` collection.
  *
  * This is core infrastructure (data access), not a plugin feature.
  * The admin UI for managing providers lives in the plugins directory.
  */
 
-import fs from "fs";
-import path from "path";
-import { DATA_DIR } from "./paths";
+import { getDocumentStore } from "./storage/db";
 import type { VirtualProvider, RotationState } from "./types";
 
-// ─── File paths ──────────────────────────────────────────────────────
+const PROVIDERS_ID = "providers";
+const ROTATION_ID = "rotation-state";
 
-const PROVIDERS_FILE = path.join(DATA_DIR, "providers.json");
-const ROTATION_FILE = path.join(DATA_DIR, "rotation-state.json");
+type ProvidersDocument = { id: string; providers: VirtualProvider[] };
+type RotationDocument = RotationState & { id: string };
 
-// ─── Ensure data dir ─────────────────────────────────────────────────
+function providersDoc() {
+  return getDocumentStore().collection<ProvidersDocument>("settings");
+}
 
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o755 });
-  }
+function rotationDoc() {
+  return getDocumentStore().collection<RotationDocument>("settings");
 }
 
 // ─── Providers CRUD ──────────────────────────────────────────────────
 
-export function getProviders(): VirtualProvider[] {
+export async function getProviders(): Promise<VirtualProvider[]> {
   try {
-    if (fs.existsSync(PROVIDERS_FILE)) {
-      return JSON.parse(fs.readFileSync(PROVIDERS_FILE, "utf-8"));
-    }
+    return (await providersDoc().get(PROVIDERS_ID))?.providers ?? [];
   } catch (err) {
-    console.error("Failed to read providers.json:", err);
+    console.error("Failed to read virtual providers:", err);
+    return [];
   }
-  return [];
 }
 
-export function saveProviders(providers: VirtualProvider[]): void {
-  ensureDataDir();
-  fs.writeFileSync(PROVIDERS_FILE, JSON.stringify(providers, null, 2));
+async function saveProviders(providers: VirtualProvider[]): Promise<void> {
+  await providersDoc().upsert({ id: PROVIDERS_ID, providers });
 }
 
-export function getProviderById(id: string): VirtualProvider | undefined {
-  return getProviders().find((p) => p.id === id);
+export async function getProviderById(id: string): Promise<VirtualProvider | undefined> {
+  return (await getProviders()).find((p) => p.id === id);
 }
 
-export function upsertProvider(provider: VirtualProvider): void {
-  const providers = getProviders();
-  const idx = providers.findIndex((p) => p.id === provider.id);
-  if (idx >= 0) {
-    providers[idx] = provider;
-  } else {
-    providers.push(provider);
-  }
-  saveProviders(providers);
-  _providersCache = null;
-}
-
-export function deleteProvider(id: string): boolean {
-  const providers = getProviders();
-  const filtered = providers.filter((p) => p.id !== id);
-  if (filtered.length === providers.length) return false;
-  saveProviders(filtered);
-  _providersCache = null;
-  return true;
-}
-
-// ─── In-memory cache for providers ───────────────────────────────────
-
-let _providersCache: VirtualProvider[] | null = null;
-let _providersCacheMtime = 0;
-
-export function getCachedProviders(): VirtualProvider[] {
-  try {
-    if (fs.existsSync(PROVIDERS_FILE)) {
-      const stat = fs.statSync(PROVIDERS_FILE);
-      const mtime = stat.mtimeMs;
-      if (_providersCache && mtime === _providersCacheMtime) {
-        return _providersCache;
-      }
-      _providersCache = JSON.parse(fs.readFileSync(PROVIDERS_FILE, "utf-8"));
-      _providersCacheMtime = mtime;
-      return _providersCache!;
+export function upsertProvider(provider: VirtualProvider): Promise<void> {
+  return getDocumentStore().transaction(async () => {
+    const providers = await getProviders();
+    const idx = providers.findIndex((p) => p.id === provider.id);
+    if (idx >= 0) {
+      providers[idx] = provider;
+    } else {
+      providers.push(provider);
     }
-  } catch {
-    // fall through
-  }
-  return [];
+    await saveProviders(providers);
+  });
+}
+
+export function deleteProvider(id: string): Promise<boolean> {
+  return getDocumentStore().transaction(async () => {
+    const providers = await getProviders();
+    const filtered = providers.filter((p) => p.id !== id);
+    if (filtered.length === providers.length) return false;
+    await saveProviders(filtered);
+    return true;
+  });
 }
 
 // ─── Rotation state (in-memory + periodic flush) ─────────────────────
 
-let _rotationState: RotationState = { counters: {}, currentIndex: {} };
+let _rotationState: Promise<RotationState> | null = null;
 let _rotationDirty = false;
 let _flushTimer: ReturnType<typeof setInterval> | null = null;
 
-function loadRotationState(): void {
-  try {
-    if (fs.existsSync(ROTATION_FILE)) {
-      _rotationState = JSON.parse(fs.readFileSync(ROTATION_FILE, "utf-8"));
-    }
-  } catch {
-    _rotationState = { counters: {}, currentIndex: {} };
-  }
+function rotationState(): Promise<RotationState> {
+  _rotationState ??= rotationDoc()
+    .get(ROTATION_ID)
+    .then((doc) => ({ counters: doc?.counters ?? {}, currentIndex: doc?.currentIndex ?? {} }))
+    .catch(() => ({ counters: {}, currentIndex: {} }));
+  ensureFlushTimer();
+  return _rotationState;
 }
 
-function flushRotationState(): void {
-  if (!_rotationDirty) return;
+async function flushRotationState(): Promise<void> {
+  if (!_rotationDirty || !_rotationState) return;
   try {
-    ensureDataDir();
-    fs.writeFileSync(ROTATION_FILE, JSON.stringify(_rotationState, null, 2));
     _rotationDirty = false;
+    await rotationDoc().upsert({ id: ROTATION_ID, ...(await _rotationState) });
   } catch (err) {
+    _rotationDirty = true;
     console.error("Failed to flush rotation state:", err);
   }
 }
 
 function ensureFlushTimer(): void {
   if (_flushTimer) return;
-  _flushTimer = setInterval(flushRotationState, 30_000);
+  _flushTimer = setInterval(() => void flushRotationState(), 30_000);
   if (_flushTimer.unref) _flushTimer.unref();
 }
-
-loadRotationState();
-ensureFlushTimer();
 
 /**
  * Get the next key for a virtual provider + role, applying rotation.
  */
-export function getRotatedKey(
+export async function getRotatedKey(
   virtualProviderId: string,
   role: string,
   keys: string[],
   rotationThreshold: number,
-): string {
+): Promise<string> {
   if (keys.length === 0) {
     throw new Error(`No keys configured for provider ${virtualProviderId}, role ${role}`);
   }
@@ -142,21 +113,22 @@ export function getRotatedKey(
     return keys[0];
   }
 
+  const state = await rotationState();
   const stateKey = `${virtualProviderId}:${role}`;
-  const currentIdx = _rotationState.currentIndex[stateKey] ?? 0;
+  const currentIdx = state.currentIndex[stateKey] ?? 0;
   const counterKey = `${stateKey}:${currentIdx}`;
-  const count = (_rotationState.counters[counterKey] ?? 0) + 1;
+  const count = (state.counters[counterKey] ?? 0) + 1;
 
   if (count >= rotationThreshold) {
     const nextIdx = (currentIdx + 1) % keys.length;
-    _rotationState.currentIndex[stateKey] = nextIdx;
-    _rotationState.counters[counterKey] = 0;
-    _rotationState.counters[`${stateKey}:${nextIdx}`] = 0;
+    state.currentIndex[stateKey] = nextIdx;
+    state.counters[counterKey] = 0;
+    state.counters[`${stateKey}:${nextIdx}`] = 0;
     _rotationDirty = true;
     return keys[nextIdx];
   }
 
-  _rotationState.counters[counterKey] = count;
+  state.counters[counterKey] = count;
   _rotationDirty = true;
   return keys[currentIdx];
 }

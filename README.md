@@ -57,8 +57,6 @@ services:
       - "3000:3000"
     volumes:
       - ./data:/app/data
-      # Mount a custom models configuration (see data/models.json.example)
-      - ./models.json:/app/data/models.json:ro
     env_file:
       - .env
     restart: unless-stopped
@@ -105,19 +103,13 @@ A 15-digit OGRN is labelled ОГРНИП.
 
 ### Models configuration
 
-The available models are defined in `data/models.json` (not included in the repository — listed in `.gitignore`). A reference configuration with all supported fields is provided in `data/models.json.example`.
+The available models are stored in the data directory as the `models` document of the `settings` collection: `data/db/settings/models.json`, shaped `{ "id": "models", "chatModels": [...], "imageModels": [...] }`. A reference configuration with all supported fields is provided in `data/models.json.example`.
 
-To get started, copy the example and adjust it:
-
-```bash
-cp data/models.json.example data/models.json
-```
-
-When deploying via Docker, mount your `models.json` into the container as shown above.
+On a fresh data directory `npm run init:data` seeds the catalogue from the example; edit the document afterwards (the server picks up changes on the next request).
 
 Boolean properties (`isLocal`, `supportsTemperature`, `supportsReasoning`, `supportsWebSearch`, `supportsUrlContext`, `supportsToolCalling`) default to `false`. The `isLocal` flag is automatically inferred as `true` when `provider` is `"local"`.
 
-`archived: true` hides a model from the model picker for everyone, admins included, and the chat and image routes refuse it; the entry stays in `models.json` so it can be restored. `GET /api/models?all=1` (admin only) returns archived models too.
+`archived: true` hides a model from the model picker for everyone, admins included, and the chat and image routes refuse it; the entry stays in the catalogue so it can be restored. `GET /api/models?all=1` (admin only) returns archived models too.
 
 `supportsWebSearch` shows the «Поиск» toggle in chat and `supportsUrlContext` lets the model read links pasted into a message. On `google` and `google-vertex` both are served by Google's native tools (Grounding with Google Search, URL Context) — and not on every model of those providers, so check the model's own documentation first. On other providers they are served by the `web` plugin of the commercial edition: pasted links are pre-fetched and injected into the prompt, while search is a tool the model calls itself through a self-hosted SearXNG — so it also needs `supportsToolCalling` (a llama.cpp server must run with `--jinja`, otherwise requests with tools fail). In the open-source build the flags have no effect there.
 
@@ -142,3 +134,10 @@ npm run dev   # http://localhost:3000
 ```
 
 Runtime data lives in `DATA_DIR` (default `./data`). Point it at another directory to run isolated instances side by side.
+
+Users, chats, image history and settings are JSON documents under `DATA_DIR/db/<collection>/<id>.json`; uploads and generated images stay in `DATA_DIR/uploads/`. Upgrading from a version that kept `users.json`, `chats/`, `images/` and `models.json` at the top of the data directory takes one migration run before the first start (the old files are kept, the run can be repeated):
+
+```bash
+DATA_DIR=./data node scripts/migrate-legacy-layout.mjs --dry-run
+DATA_DIR=./data node scripts/migrate-legacy-layout.mjs
+```

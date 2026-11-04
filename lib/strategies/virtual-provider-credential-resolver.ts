@@ -14,22 +14,22 @@ import type { ProviderResolver } from "../contracts";
 import type { BaseProvider, ResolvedCredentials, VirtualProvider } from "../types";
 import { readModelsConfig } from "../models.server";
 import { getLocalLLMBaseURL } from "../local-llm-config";
-import { getCachedProviders, getRotatedKey } from "../provider-store";
+import { getProviders, getRotatedKey } from "../provider-store";
 
 export class VirtualProviderCredentialResolver implements ProviderResolver {
-  resolve(
+  async resolve(
     modelId: string,
     provider: string,
     userRole: string,
-  ): ResolvedCredentials | null {
-    const { chatModels, imageModels } = readModelsConfig();
+  ): Promise<ResolvedCredentials | null> {
+    const { chatModels, imageModels } = await readModelsConfig();
     const allModels = [...chatModels, ...imageModels];
     const model = allModels.find((m) => m.id === modelId);
     const baseProvider = (model?.provider ?? provider) as BaseProvider;
 
     // Only if model has explicit virtualProviderId → use VP with rotation
     if (model?.virtualProviderId) {
-      const resolved = this.resolveFromVP(model.virtualProviderId, userRole);
+      const resolved = await this.resolveFromVP(model.virtualProviderId, userRole);
       if (resolved) return resolved;
     }
 
@@ -45,24 +45,24 @@ export class VirtualProviderCredentialResolver implements ProviderResolver {
     return this.resolveFromEnv(baseProvider);
   }
 
-  private resolveFromVP(
+  private async resolveFromVP(
     vpId: string,
     role: string,
-  ): ResolvedCredentials | null {
-    const providers = getCachedProviders();
+  ): Promise<ResolvedCredentials | null> {
+    const providers = await getProviders();
     const vp = providers.find((p) => p.id === vpId);
     if (!vp) return null;
     return this.pickKeyFromVP(vp, role);
   }
 
-  private pickKeyFromVP(
+  private async pickKeyFromVP(
     vp: VirtualProvider,
     role: string,
-  ): ResolvedCredentials | null {
+  ): Promise<ResolvedCredentials | null> {
     const group = vp.groups[role] ?? vp.groups["default"];
     if (!group || group.keys.length === 0) return null;
 
-    const key = getRotatedKey(vp.id, role, group.keys, group.rotationThreshold);
+    const key = await getRotatedKey(vp.id, role, group.keys, group.rotationThreshold);
 
     if (vp.baseProvider === "local") {
       return { baseProvider: "local", apiKey: "", baseURL: key };

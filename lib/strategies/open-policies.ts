@@ -15,29 +15,29 @@ import type { ModelsConfig } from "../models";
 
 /** Reports "not billed" for every request */
 export class NoPricingPolicy implements PricingPolicy {
-  chatCost(): CostSnapshot | null {
+  async chatCost(): Promise<CostSnapshot | null> {
     return null;
   }
 
-  imageCost(): CostSnapshot | null {
+  async imageCost(): Promise<CostSnapshot | null> {
     return null;
   }
 }
 
 /** Every model is available to every user */
 export class OpenModelAccessPolicy implements ModelAccessPolicy {
-  filter(_userId: string, config: ModelsConfig): ModelsConfig {
+  async filter(_userId: string, config: ModelsConfig): Promise<ModelsConfig> {
     return config;
   }
 
-  canUse(): boolean {
+  async canUse(): Promise<boolean> {
     return true;
   }
 }
 
 /** No balances in OSS, so nothing is ever refused */
 export class OpenSpendingGuard implements SpendingGuard {
-  check(): string | null {
+  async check(): Promise<string | null> {
     return null;
   }
 }

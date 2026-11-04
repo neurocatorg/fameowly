@@ -1,6 +1,4 @@
-import fs from "fs";
-import path from "path";
-import { DATA_DIR } from "./paths";
+import { getDocumentStore } from "./storage/db";
 import {
   AVAILABLE_MODELS,
   IMAGE_MODELS,
@@ -8,7 +6,13 @@ import {
   type ModelsConfig,
 } from "./models";
 
-const MODELS_JSON_PATH = path.join(DATA_DIR, "models.json");
+const MODELS_ID = "models";
+
+type ModelsDocument = ModelsConfig & { id: string };
+
+function settings() {
+  return getDocumentStore().collection<ModelsDocument>("settings");
+}
 
 /**
  * Apply defaults to a raw model entry from JSON config.
@@ -32,29 +36,28 @@ function normalizeModel(raw: ModelOption): ModelOption {
 }
 
 /**
- * Read models config from data/models.json (server-side only).
- * Falls back to built-in defaults if the file doesn't exist or is invalid.
+ * Read the models catalogue (server-side only).
+ * Falls back to built-in defaults when none is stored.
  */
-export function readModelsConfig(): ModelsConfig {
+export async function readModelsConfig(): Promise<ModelsConfig> {
   try {
-    if (fs.existsSync(MODELS_JSON_PATH)) {
-      const raw = fs.readFileSync(MODELS_JSON_PATH, "utf-8");
-      const parsed = JSON.parse(raw) as ModelsConfig;
+    const stored = await settings().get(MODELS_ID);
+    if (stored) {
       return {
         chatModels:
-          (parsed.chatModels?.length > 0
-            ? parsed.chatModels
+          (stored.chatModels?.length > 0
+            ? stored.chatModels
             : AVAILABLE_MODELS
           ).map(normalizeModel),
         imageModels:
-          (parsed.imageModels?.length > 0
-            ? parsed.imageModels
+          (stored.imageModels?.length > 0
+            ? stored.imageModels
             : IMAGE_MODELS
           ).map(normalizeModel),
       };
     }
   } catch (err) {
-    console.error("Failed to read models.json, using defaults:", err);
+    console.error("Failed to read the models catalogue, using defaults:", err);
   }
   return {
     chatModels: AVAILABLE_MODELS.map(normalizeModel),
@@ -62,15 +65,13 @@ export function readModelsConfig(): ModelsConfig {
   };
 }
 
-/**
- * Write models config to data/models.json (server-side only).
- */
-export function saveModelsConfig(config: ModelsConfig): void {
-  const dir = path.dirname(MODELS_JSON_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
-  }
-  fs.writeFileSync(MODELS_JSON_PATH, JSON.stringify(config, null, 2));
+/** Overwrite the models catalogue (server-side only) */
+export async function saveModelsConfig(config: ModelsConfig): Promise<void> {
+  await settings().upsert({
+    id: MODELS_ID,
+    chatModels: config.chatModels,
+    imageModels: config.imageModels,
+  });
 }
 
 /** Drop archived models — they must not be offered to anyone, admins included */
@@ -81,8 +82,8 @@ export function withoutArchived(config: ModelsConfig): ModelsConfig {
   };
 }
 
-export function isArchivedModel(modelId: string): boolean {
-  const { chatModels, imageModels } = readModelsConfig();
+export async function isArchivedModel(modelId: string): Promise<boolean> {
+  const { chatModels, imageModels } = await readModelsConfig();
   return [...chatModels, ...imageModels].some((m) => m.id === modelId && m.archived);
 }
 

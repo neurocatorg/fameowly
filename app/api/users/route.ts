@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authorizeAdmin,
   getUsers,
-  saveUsers,
+  createUser,
+  updateUser,
+  deleteUser,
   hashPassword,
   bumpSessionVersion,
 } from "@/lib/auth";
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
   const admin = await authorizeAdmin(adminToken(request));
   if (!admin) return FORBIDDEN;
 
-  const users = getUsers().map((u) => ({
+  const users = (await getUsers()).map((u) => ({
     id: u.id,
     name: u.name,
     role: u.role,
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const users = getUsers();
+  const users = await getUsers();
   const exists = users.find(
     (u) => u.name.toLowerCase() === name.toLowerCase()
   );
@@ -65,8 +67,7 @@ export async function POST(request: NextRequest) {
     sessionVersion: 1,
   };
 
-  users.push(newUser);
-  saveUsers(users);
+  await createUser(newUser);
 
   return NextResponse.json({
     user: { id: newUser.id, name: newUser.name, role: newUser.role },
@@ -93,16 +94,13 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const users = getUsers();
-  const target = users.find((u) => u.id === id);
-  if (!target) {
+  if (!(await deleteUser(id))) {
     return NextResponse.json(
       { error: "Пользователь не найден" },
       { status: 404 }
     );
   }
 
-  saveUsers(users.filter((u) => u.id !== id));
   await container.get("userLifecycle").onUserDeleted(id);
 
   return NextResponse.json({ success: true });
@@ -124,7 +122,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const users = getUsers();
+  const users = await getUsers();
   const user = users.find((u) => u.id === id);
   if (!user) {
     return NextResponse.json(
@@ -161,7 +159,11 @@ export async function PATCH(request: NextRequest) {
   }
 
   bumpSessionVersion(user);
-  saveUsers(users);
+  await updateUser(user.id, {
+    role: user.role,
+    password: user.password,
+    sessionVersion: user.sessionVersion,
+  });
 
   return NextResponse.json({
     user: { id: user.id, name: user.name, role: user.role },

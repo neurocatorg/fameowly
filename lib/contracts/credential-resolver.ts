@@ -14,5 +14,5 @@ export interface ProviderResolver {
     modelId: string,
     provider: string,
     userRole: string,
-  ): ResolvedCredentials | null;
+  ): Promise<ResolvedCredentials | null>;
 }
