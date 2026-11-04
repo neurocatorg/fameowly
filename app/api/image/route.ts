@@ -172,7 +172,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           contents: [{ role: "user", parts }],
           generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
+            // With TEXT allowed, gemini-3.1-flash-image may answer vague prompts with text only
+            responseModalities: ["IMAGE"],
             imageConfig,
           },
         }),

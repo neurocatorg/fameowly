@@ -75,7 +75,9 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - **File security**: files are stored in `data/uploads/{userId}/`, 
   access is verified by `userId` from the session.
 - **Generated images**: `/api/image` passes `imageConfig.{aspectRatio,imageSize}` to Gemini and
-  upscales locally only when the model ignores `imageSize`. Response parts flagged `thought`
+  upscales locally only when the model ignores `imageSize`. `responseModalities` is `["IMAGE"]`
+  only: with `TEXT` allowed, gemini-3.1-flash-image answers vague prompts with text and no
+  image (measured 2026-11-04). Response parts flagged `thought`
   are skipped: gemini-3-pro-image sends a 1K draft image there before the final one.
   Originals reach 25 MB, so the UI never shows them: `imageVariantUrl(url, "thumb" | "view")`
   → `/api/files/...?v=` serves a WebP (256 / 2048 px) rendered once by `lib/image-variants.ts`
