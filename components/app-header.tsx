@@ -104,6 +104,8 @@ export function AppHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-5">
+        <PluginSlot id="header-account" props={{ status }} />
+
         {mode === "chat" && chatId && (
           <button
             onClick={() => exportPdf(chatId)}
