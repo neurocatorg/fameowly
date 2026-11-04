@@ -11,7 +11,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const dataDir = path.resolve(process.env.DATA_DIR || path.join(root, "data"));
 
-const SUBDIRS = ["db", "usage", "uploads", "uploads/generated"];
+const SUBDIRS = ["db", "uploads", "uploads/generated"];
 
 fs.mkdirSync(dataDir, { recursive: true });
 for (const dir of SUBDIRS) {
