@@ -24,8 +24,9 @@ export async function GET(req: NextRequest) {
   }
 
   const includeArchived = user.role === "admin" && req.nextUrl.searchParams.get("all") === "1";
-  const catalogue = includeArchived ? readModelsConfig() : withoutArchived(readModelsConfig());
-  const config = container.get("modelAccessPolicy").filter(user.id, catalogue);
+  const stored = await readModelsConfig();
+  const catalogue = includeArchived ? stored : withoutArchived(stored);
+  const config = await container.get("modelAccessPolicy").filter(user.id, catalogue);
   return NextResponse.json(stripPricingForNonAdmin(config, user.role === "admin"));
 }
 
@@ -56,7 +57,7 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    saveModelsConfig(body);
+    await saveModelsConfig(body);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(

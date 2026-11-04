@@ -8,11 +8,14 @@
  */
 
 import type { BaseProvider } from "../types";
+import type { ModelOption } from "../models";
 import type { MessageGrounding } from "../web-tools/grounding";
 
 export interface WebToolsRequest {
   baseProvider: BaseProvider;
   modelId?: string;
+  /** Catalogue entry of `modelId`, when the model is configured */
+  model?: ModelOption;
   /** User enabled live web search for this chat */
   webSearchEnabled: boolean;
   /** The current user message contains at least one fetchable public URL */

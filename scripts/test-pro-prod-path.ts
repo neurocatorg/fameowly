@@ -7,7 +7,7 @@ import type { LanguageModel } from "ai";
 
 async function main() {
   await initializeContainer();
-  const creds = container
+  const creds = await container
     .get("providerResolver")
     .resolve("gemini-3.1-pro-preview", "google-vertex", "admin");
   if (!creds) throw new Error("No credentials resolved");

@@ -15,7 +15,7 @@ interface PrintPageProps {
 export async function generateMetadata({ params }: PrintPageProps): Promise<Metadata> {
   const session = await getSession();
   const { chatId } = await params;
-  const chat = session ? getChat(session.userId, chatId) : null;
+  const chat = session ? await getChat(session.userId, chatId) : null;
   return { title: chat?.title || "Экспорт чата" };
 }
 
@@ -24,12 +24,12 @@ export default async function PrintChatPage({ params, searchParams }: PrintPageP
   if (!session) notFound();
 
   const { chatId } = await params;
-  const chat = getChat(session.userId, chatId);
+  const chat = await getChat(session.userId, chatId);
   if (!chat) notFound();
 
   const { autoprint } = await searchParams;
   const modelName =
-    readModelsConfig().chatModels.find((m) => m.id === chat.modelId)?.name ?? chat.modelId;
+    (await readModelsConfig()).chatModels.find((m) => m.id === chat.modelId)?.name ?? chat.modelId;
 
   return (
     <>

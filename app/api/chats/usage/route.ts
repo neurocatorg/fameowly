@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "chatId обязателен" }, { status: 400 });
   }
 
-  const chat = getChat(session.userId, chatId);
+  const chat = await getChat(session.userId, chatId);
   const usage = chat?.usage;
 
   return NextResponse.json({

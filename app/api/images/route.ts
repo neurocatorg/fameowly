@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   if (!userId)
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const history = getImageHistory(userId);
+  const history = await getImageHistory(userId);
   return NextResponse.json({ history });
 }
 
@@ -37,7 +37,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "id обязателен" }, { status: 400 });
   }
 
-  const deleted = deleteImageHistoryItem(userId, id);
+  const deleted = await deleteImageHistoryItem(userId, id);
   if (!deleted)
     return NextResponse.json({ error: "Не найдено" }, { status: 404 });
 

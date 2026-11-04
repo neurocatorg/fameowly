@@ -44,12 +44,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { imageModels } = withoutArchived(readModelsConfig());
+    const { imageModels } = withoutArchived(await readModelsConfig());
     const modelId = model || imageModels[0]?.id;
     const modelInfo =
       imageModels.find((m) => m.id === modelId) || imageModels[0];
 
-    if (model && isArchivedModel(model)) {
+    if (model && (await isArchivedModel(model))) {
       return NextResponse.json({ error: "Модель недоступна" }, { status: 403 });
     }
 
@@ -86,18 +86,18 @@ export async function POST(req: NextRequest) {
 
     const userRole = req.headers.get("x-user-role") || "user";
     const userId = req.headers.get("x-user-id") || "unknown";
-    if (!container.get("modelAccessPolicy").canUse(userId, modelInfo.id)) {
+    if (!(await container.get("modelAccessPolicy").canUse(userId, modelInfo.id))) {
       return NextResponse.json(
         { error: "Модель недоступна" },
         { status: 403 }
       );
     }
-    const spendingRefusal = container.get("spendingGuard").check(userId);
+    const spendingRefusal = await container.get("spendingGuard").check(userId);
     if (spendingRefusal) {
       return NextResponse.json({ error: spendingRefusal }, { status: 402 });
     }
 
-    const credentials = container.get("providerResolver").resolve(modelId, modelInfo.provider, userRole)!;
+    const credentials = (await container.get("providerResolver").resolve(modelId, modelInfo.provider, userRole))!;
 
     if (modelInfo.provider === "google" || modelInfo.provider === "google-vertex") {
       const isVertex = modelInfo.provider === "google-vertex";
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Vertex AI auth failed";
           historyItem.error = msg;
-          addImageHistoryItem(userId, historyItem);
+          await addImageHistoryItem(userId, historyItem);
           return NextResponse.json({ error: msg, historyItem }, { status: 500 });
         }
       } else {
@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
           // use default error
         }
         historyItem.error = errorMsg;
-        addImageHistoryItem(userId, historyItem);
+        await addImageHistoryItem(userId, historyItem);
         return NextResponse.json(
           { error: errorMsg, historyItem },
           { status: response.status }
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
 
       if (!resParts || resParts.length === 0) {
         historyItem.error = "Модель не вернула ответ";
-        addImageHistoryItem(userId, historyItem);
+        await addImageHistoryItem(userId, historyItem);
         return NextResponse.json(
           { error: "Модель не вернула ответ", historyItem },
           { status: 500 }
@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
         );
         const description = textPart?.text || undefined;
 
-        addImageHistoryItem(userId, historyItem);
+        await addImageHistoryItem(userId, historyItem);
         container.get("usageTracker").onImageFinish(userId, modelId)
           .catch((err) => console.error("[usage-tracker] image finish error:", err));
         return NextResponse.json({ imageUrl, description, historyItem });
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
       if (textPart?.text) {
         const errMsg = `Модель ответила текстом: ${textPart.text}`;
         historyItem.error = errMsg;
-        addImageHistoryItem(userId, historyItem);
+        await addImageHistoryItem(userId, historyItem);
         return NextResponse.json(
           { error: errMsg, historyItem },
           { status: 422 }
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
       }
 
       historyItem.error = "Модель не вернула изображение";
-      addImageHistoryItem(userId, historyItem);
+      await addImageHistoryItem(userId, historyItem);
       return NextResponse.json(
         { error: "Модель не вернула изображение", historyItem },
         { status: 500 }
@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
       const errBody = await response.text();
       console.error("Image generation error:", errBody);
       historyItem.error = "Ошибка генерации изображения";
-      addImageHistoryItem(userId, historyItem);
+      await addImageHistoryItem(userId, historyItem);
       return NextResponse.json(
         { error: "Ошибка генерации изображения", historyItem },
         { status: response.status }
@@ -317,7 +317,7 @@ export async function POST(req: NextRequest) {
     }
 
     historyItem.imageUrl = imageUrl || null;
-    addImageHistoryItem(userId, historyItem);
+    await addImageHistoryItem(userId, historyItem);
     container.get("usageTracker").onImageFinish(userId, modelId)
       .catch((err) => console.error("[usage-tracker] image finish error:", err));
     return NextResponse.json({ imageUrl, historyItem });

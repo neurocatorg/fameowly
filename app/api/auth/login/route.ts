@@ -5,8 +5,7 @@ import {
   createSession,
   isLegacyHash,
   hashPassword,
-  getUsers,
-  saveUsers,
+  updateUser,
 } from "@/lib/auth";
 
 const COOKIE_NAME = "session";
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = findUserByName(name);
+    const user = await findUserByName(name);
     if (!user || !verifyPassword(password, user.password)) {
       return NextResponse.json(
         { error: "Неверное имя или пароль" },
@@ -32,15 +31,12 @@ export async function POST(request: NextRequest) {
 
     // Upgrade pre-salt hashes now that we have the plaintext
     if (isLegacyHash(user.password)) {
-      const users = getUsers();
-      const stored = users.find((u) => u.id === user.id);
-      if (stored) {
-        stored.password = hashPassword(password);
-        stored.sessionVersion = stored.sessionVersion ?? 1;
-        saveUsers(users);
-        user.password = stored.password;
-        user.sessionVersion = stored.sessionVersion;
-      }
+      user.password = hashPassword(password);
+      user.sessionVersion = user.sessionVersion ?? 1;
+      await updateUser(user.id, {
+        password: user.password,
+        sessionVersion: user.sessionVersion,
+      });
     }
 
     const token = await createSession(user);

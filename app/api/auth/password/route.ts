@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   authorize,
-  getUsers,
-  saveUsers,
+  updateUser,
   hashPassword,
   verifyPassword,
   bumpSessionVersion,
@@ -33,15 +32,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const users = getUsers();
-  const user = users.find((u) => u.id === account.id);
-  if (!user || !verifyPassword(currentPassword, user.password)) {
+  const user = account;
+  if (!verifyPassword(currentPassword, user.password)) {
     return NextResponse.json({ error: "Текущий пароль неверен" }, { status: 403 });
   }
 
   user.password = hashPassword(newPassword);
   bumpSessionVersion(user);
-  saveUsers(users);
+  await updateUser(user.id, {
+    password: user.password,
+    sessionVersion: user.sessionVersion,
+  });
 
   // Re-issue the caller's own session so the password change does not log them out
   const response = NextResponse.json({ success: true });

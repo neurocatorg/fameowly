@@ -21,3 +21,15 @@ export type {
   ReasoningOptionsProvider,
   ReasoningOptionsRequest,
 } from "./reasoning-options-provider";
+export type {
+  DocumentStore,
+  Collection,
+  CollectionOptions,
+  IndexSpec,
+  StoredDocument,
+  Filter,
+  ComparisonOperators,
+  FindOptions,
+  SortSpec,
+  UpdateSpec,
+} from "./document-store";

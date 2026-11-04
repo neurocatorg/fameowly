@@ -16,6 +16,7 @@ import type {
   UserLifecycle,
   WebToolsProvider,
   ReasoningOptionsProvider,
+  DocumentStore,
 } from "./contracts";
 
 export interface ServiceMap {
@@ -28,6 +29,7 @@ export interface ServiceMap {
   userLifecycle: UserLifecycle;
   webToolsProvider: WebToolsProvider;
   reasoningOptionsProvider: ReasoningOptionsProvider;
+  documentStore: DocumentStore;
 }
 
 /** Registry surface exposed to plugins during register() */

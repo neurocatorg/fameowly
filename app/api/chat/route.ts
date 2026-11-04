@@ -5,7 +5,7 @@ import { applyWebContext } from "@/lib/chat/apply-web-context";
 import { createGroundingTracker, countStepSearchQueries } from "@/lib/chat/stream-grounding";
 import { withHeartbeat } from "@/lib/chat/sse-heartbeat";
 import { extractPublicUrls } from "@/lib/web-tools/url-detection";
-import { isArchivedModel } from "@/lib/models.server";
+import { isArchivedModel, readModelsConfig } from "@/lib/models.server";
 import type { ApiMessage } from "@/lib/chat/build-core-messages";
 import type { ResolvedCredentials } from "@/lib/types";
 import type { LanguageModel, ToolSet } from "ai";
@@ -73,10 +73,13 @@ export async function POST(req: Request) {
     // Model access is a plugin concern; the OSS policy grants everything.
     const userRole = req.headers.get("x-user-role") || "user";
     const userId = req.headers.get("x-user-id") || "unknown";
-    if (isArchivedModel(modelId) || !container.get("modelAccessPolicy").canUse(userId, modelId)) {
+    if (
+      (await isArchivedModel(modelId)) ||
+      !(await container.get("modelAccessPolicy").canUse(userId, modelId))
+    ) {
       return jsonError("Модель недоступна", 403);
     }
-    const spendingRefusal = container.get("spendingGuard").check(userId);
+    const spendingRefusal = await container.get("spendingGuard").check(userId);
     if (spendingRefusal) return jsonError(spendingRefusal, 402);
 
     const system = systemPrompt || DEFAULT_SYSTEM_PROMPT;
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
     const userMessageId = lastUserMessage?.id;
 
     const credentials: ResolvedCredentials =
-      container.get("providerResolver").resolve(modelId, provider, userRole)!;
+      (await container.get("providerResolver").resolve(modelId, provider, userRole))!;
 
     const model = container.get("modelFactory").create(credentials, modelId) as LanguageModel | null;
     if (!model) {
@@ -104,6 +107,7 @@ export async function POST(req: Request) {
     const webRequest = {
       baseProvider: credentials.baseProvider,
       modelId,
+      model: (await readModelsConfig()).chatModels.find((m) => m.id === modelId),
       webSearchEnabled: rawWebSearchEnabled !== false,
       urlContextRequested: urls.length > 0,
       chatUrls,

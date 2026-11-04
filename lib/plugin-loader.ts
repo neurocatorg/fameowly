@@ -21,6 +21,8 @@ import {
   OpenSpendingGuard,
   NoopUserLifecycle,
 } from "./strategies/open-policies";
+import { FileDocumentStore } from "./storage/file-document-store";
+import { dataPath } from "./paths";
 import { plugins as extensionPlugins } from "@plugins";
 
 let _initialized = false;
@@ -43,6 +45,7 @@ export function initializeContainer(): void {
   container.register("userLifecycle", new NoopUserLifecycle());
   container.register("webToolsProvider", new GoogleWebToolsProvider());
   container.register("reasoningOptionsProvider", new DefaultReasoningOptionsProvider());
+  container.register("documentStore", new FileDocumentStore(dataPath("db")));
 
   // Extension plugins override via container.register()
   loadExtensionPlugins();
