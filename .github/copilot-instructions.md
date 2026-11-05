@@ -67,6 +67,9 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   exists. Mail goes out via `after()`, never awaited in the response. Per-IP limits need
   `TRUSTED_PROXY_HOPS` (default 0 = off). Accounts are created only by an admin or when
   `registrationPolicy.canCreateUser` allows it at code verification (OSS: never).
+  Self-service registration is implemented by a plugin through `registrationPolicy`
+  (its form fills the `login-request-access` slot; public delegator `/api/auth/access-request`).
+  `/login?email=` pre-fills the address, so mail can link straight to sign-in.
 - **Mail**: `mailer` slot; OSS default sends via `nodemailer` when `SMTP_URL` + `MAIL_FROM`
   are set, prints to the log in development, and is unavailable in production otherwise
   (the login page then shows the password form only).

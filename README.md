@@ -101,6 +101,7 @@ With mail configured, the login page asks for an email and sends an 8-digit code
 password is optional. Without `SMTP_URL`, `npm run dev` prints the messages to the
 server log and a production server offers password sign-in only. Codes are sent
 only to existing accounts, and the reply never tells whether an account exists.
+A link to `/login?email=you@example.com` opens the form with the address filled in.
 `TRUSTED_PROXY_HOPS` must match the real proxy chain: the client address is taken
 from `X-Forwarded-For` that many entries from the right; leave it unset when the
 hub cannot see client addresses.

@@ -22,7 +22,7 @@ const EMPTY_STATUS: PluginStatus = {
 };
 
 function tabCls(active: boolean): string {
-  return `flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition ${
+  return `flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium transition ${
     active ? "bg-th-subtle text-th-fg" : "text-th-fg-m hover:text-th-fg"
   }`;
 }
@@ -61,7 +61,7 @@ export default function AdminPage() {
       </header>
 
       <div className={`mx-auto w-full ${widthCls} px-6 pt-6`}>
-        <div className="flex gap-1 rounded-lg bg-th-panel p-1">
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-th-panel p-1">
           <button onClick={() => setActiveTab("users")} className={tabCls(activeTab === "users")}>
             <User className="h-4 w-4" />
             Пользователи

@@ -12,6 +12,8 @@ const publicPaths = [
   "/api/auth/login",
   "/api/auth/email/",
   "/api/auth/password/reset",
+  // Access request form on the login page; the plugin handler applies its own limits
+  "/api/auth/access-request",
   // Guests need it for plugin slots on the login page; the route trims the answer for them
   "/api/plugins/capabilities",
   // Acquirer webhook, authenticated by its own signature
