@@ -16,9 +16,9 @@ type Step = "email" | "code" | "password" | "reset-email" | "reset-code" | "requ
 const RESEND_SECONDS = 45;
 
 /** Without mail delivery only the password form is offered */
-export function LoginFlow({ emailLogin }: { emailLogin: boolean }) {
+export function LoginFlow({ emailLogin, initialEmail = "" }: { emailLogin: boolean; initialEmail?: string }) {
   const [step, setStep] = useState<Step>(emailLogin ? "email" : "password");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [noAccountHint, setNoAccountHint] = useState(false);
   const countdown = useCountdown();
   const api = useSignIn();
