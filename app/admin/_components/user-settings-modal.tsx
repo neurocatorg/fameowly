@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { PluginSlot } from "@/lib/plugin-ui";
 import {
+  inputCls,
   selectCls,
   labelCls,
   btnPrimary,
@@ -31,6 +32,7 @@ export function UserSettingsModal({
   onClose,
 }: UserSettingsModalProps) {
   const [role, setRole] = useState(user.role);
+  const [email, setEmail] = useState(user.email ?? "");
   const [saving, setSaving] = useState(false);
   const pluginCommit = useRef<Commit | null>(null);
 
@@ -46,21 +48,27 @@ export function UserSettingsModal({
     try {
       await pluginCommit.current?.();
 
-      if (role !== user.role) {
+      const changes: { role?: UserRecord["role"]; email?: string } = {};
+      if (role !== user.role) changes.role = role;
+      if (email.trim().toLowerCase() !== (user.email ?? "")) changes.email = email;
+
+      if (Object.keys(changes).length > 0) {
         const res = await fetch("/api/users", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: user.id, role }),
+          body: JSON.stringify({ id: user.id, ...changes }),
         });
         const data = await res.json();
         if (!res.ok) {
           onError(data.error);
           return;
         }
-        onSaved(`Настройки «${user.name}» сохранены, сессии сброшены`);
-      } else {
-        onSaved(`Настройки «${user.name}» сохранены`);
       }
+      onSaved(
+        changes.role
+          ? `Настройки «${user.name}» сохранены, сессии сброшены`
+          : `Настройки «${user.name}» сохранены`
+      );
       onClose();
     } catch {
       onError("Не удалось сохранить настройки");
@@ -82,6 +90,22 @@ export function UserSettingsModal({
         </p>
 
         <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Для входа по коду"
+              className={inputCls}
+            />
+            {user.email && !user.emailVerified && (
+              <p className="mt-1 text-xs text-th-fg-f">
+                Не подтверждён: подтвердится при первом входе по коду
+              </p>
+            )}
+          </div>
+
           <div>
             <label className={labelCls}>Роль</label>
             <select

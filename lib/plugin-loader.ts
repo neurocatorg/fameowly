@@ -22,6 +22,8 @@ import {
   NoopUserLifecycle,
 } from "./strategies/open-policies";
 import { FileDocumentStore } from "./storage/file-document-store";
+import { DefaultMailer } from "./strategies/default-mailer";
+import { ClosedRegistrationPolicy } from "./strategies/closed-registration-policy";
 import { dataPath } from "./paths";
 import { plugins as extensionPlugins } from "@plugins";
 
@@ -46,6 +48,8 @@ export function initializeContainer(): void {
   container.register("webToolsProvider", new GoogleWebToolsProvider());
   container.register("reasoningOptionsProvider", new DefaultReasoningOptionsProvider());
   container.register("documentStore", new FileDocumentStore(dataPath("db")));
+  container.register("mailer", new DefaultMailer());
+  container.register("registrationPolicy", new ClosedRegistrationPolicy());
 
   // Extension plugins override via container.register()
   loadExtensionPlugins();

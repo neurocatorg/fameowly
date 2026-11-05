@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// E2E_BASE_URL points the run at a server started separately (own DATA_DIR); no dev server is spawned then
+const externalServer = process.env.E2E_BASE_URL;
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -13,7 +16,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
 
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: externalServer ?? "http://localhost:3000",
     trace: "on-first-retry",
   },
 
@@ -32,10 +35,12 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  webServer: externalServer
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:3000",
+        reuseExistingServer: !process.env.CI,
+        timeout: 30_000,
+      },
 });

@@ -9,7 +9,7 @@ import { UserRow } from "./user-row";
 import { UserSettingsModal } from "./user-settings-modal";
 import { ResetPasswordModal } from "./reset-password-modal";
 import { cardCls } from "@/lib/ui-classes";
-import type { UserRecord } from "./types";
+import type { NewUser, UserRecord } from "./types";
 
 function loadUsers(): Promise<UserRecord[]> {
   return fetch("/api/users")
@@ -59,11 +59,11 @@ export function UsersPanel({ hasUsageSlot }: { hasUsageSlot: boolean }) {
 
   const applyFilter = useCallback((ids: string[] | null) => setAllowedIds(ids), []);
 
-  async function createUser(name: string, password: string, role: "user" | "admin") {
+  async function createUser(user: NewUser) {
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, password, role }),
+      body: JSON.stringify(user),
     });
     const data = await res.json();
     if (!res.ok) {

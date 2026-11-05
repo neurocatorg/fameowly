@@ -41,6 +41,12 @@ export function UserRow({
 
         <div className="min-w-0">
           <span className="font-medium">{user.name}</span>
+          {user.email && (
+            <span className="block truncate text-xs text-th-fg-s" title={user.email}>
+              {user.email}
+              {!user.emailVerified && <span className="text-th-fg-f"> · не подтверждён</span>}
+            </span>
+          )}
           <div className="flex flex-wrap items-center gap-x-2 text-xs text-th-fg-m">
             <span className={isAdmin ? "text-amber-400" : undefined}>
               {ROLE_LABELS[user.role] ?? user.role}

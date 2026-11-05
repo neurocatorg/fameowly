@@ -2,15 +2,17 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { findUserById, type User, type UserRole } from "./user-store";
 
-export { hashPassword, isLegacyHash, verifyPassword } from "./password";
+export { hashPassword, isLegacyHash, verifyPassword, MIN_PASSWORD_LENGTH } from "./password";
 export {
   getUsers,
   findUserByName,
   findUserById,
+  findUserByEmail,
   createUser,
   updateUser,
   deleteUser,
   bumpSessionVersion,
+  setUserPassword,
 } from "./user-store";
 export type { User, UserRole } from "./user-store";
 

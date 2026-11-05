@@ -9,7 +9,9 @@ export type { UsageTracker, ChatFinishContext } from "./usage-tracker";
 export type { PricingPolicy, CostSnapshot } from "./pricing-policy";
 export type { ModelAccessPolicy } from "./model-access-policy";
 export type { SpendingGuard } from "./spending-guard";
-export type { UserLifecycle } from "./user-lifecycle";
+export type { UserLifecycle, CreatedUser, UserCreatedContext } from "./user-lifecycle";
+export type { Mailer, MailMessage } from "./mailer";
+export type { RegistrationPolicy, UnknownEmailAction } from "./registration-policy";
 export type {
   WebToolsProvider,
   WebToolsRequest,

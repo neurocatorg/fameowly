@@ -167,4 +167,14 @@ export async function runDocumentStoreChecks(store: DocumentStore): Promise<void
     await sessions.insert({ id: "old", userId: "u1", createdAt: new Date().toISOString() });
     assert.equal((await sessions.get("old"))?.userId, "u1");
   });
+
+  await check("ttlSeconds 0 expires each document at its own date", async () => {
+    const leases = store.collection<{ id: string; expiresAt: string }>("leases", {
+      indexes: [{ fields: ["expiresAt"], ttlSeconds: 0 }],
+    });
+    await leases.upsert({ id: "live", expiresAt: new Date(Date.now() + 60_000).toISOString() });
+    await leases.upsert({ id: "gone", expiresAt: new Date(Date.now() - 1_000).toISOString() });
+    assert.deepEqual((await leases.find()).map((l) => l.id), ["live"]);
+    assert.equal(await leases.get("gone"), null);
+  });
 }

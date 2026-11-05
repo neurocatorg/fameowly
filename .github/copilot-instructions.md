@@ -41,7 +41,7 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - api/ # API routes (chat, image, upload, auth, etc.)
 - hooks/ # Custom React hooks (UI business logic)
 - components/ # Shared UI components (sidebar, chat-message, etc.); `public/` = guest page frame + footer
-- lib/ # Server & shared utilities, types, domain logic; `storage/` = document store (file backend)
+- lib/ # Server & shared utilities, types, domain logic; `storage/` = document store (file backend); `sign-in/` = email codes, limits, password sign-in
 - data/ # Runtime data: `db/<collection>/<id>.json` (users, chats, image_history, settings), `uploads/`
 - extensions/ # Git submodule with closed-source plugins (providers, billing, web, etc.)
 - searxng/ # SearXNG config (`settings.yml`) for the `searxng` docker-compose service
@@ -56,7 +56,20 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `<think>` instead of returning `reasoning_content`. There is no bespoke local stream client.
 - **OpenRouter**: use `openrouter.chat(modelId)` (Chat Completions API),
   NOT `openrouter(modelId)` (Responses API is not supported).
-- **Auth**: JWT in httpOnly cookies, middleware for route protection.
+- **Auth**: JWT in httpOnly cookies, middleware for route protection. Sign-in by an
+  8-digit email code (`lib/sign-in/`, `/api/auth/email/{start,verify}`), by password with
+  name or email (`/api/auth/login`), password reset by code (`/api/auth/password/reset`,
+  bumps `sessionVersion`). Users: `email?` (unique, lower-case), `emailVerifiedAt?`,
+  `password?` (absent = code only); `name` is the display name. Codes live in `auth_codes`
+  (HMAC with `AUTH_CODE_SECRET` or `JWT_SECRET`, TTL 10 min, 5 attempts, deleted on use);
+  cooldowns and hourly counters in `auth_limits` (per-document expiry via `ttlSeconds: 0`).
+  Limits apply to every address and the `start` reply never depends on whether an account
+  exists. Mail goes out via `after()`, never awaited in the response. Per-IP limits need
+  `TRUSTED_PROXY_HOPS` (default 0 = off). Accounts are created only by an admin or when
+  `registrationPolicy.canCreateUser` allows it at code verification (OSS: never).
+- **Mail**: `mailer` slot; OSS default sends via `nodemailer` when `SMTP_URL` + `MAIL_FROM`
+  are set, prints to the log in development, and is unavailable in production otherwise
+  (the login page then shows the password form only).
 - **Storage**: every persistent document goes through the `documentStore` slot
   (`lib/contracts/document-store.ts`): collections with a small filter language, atomic
   `update` with `inc`, `transaction(fn)`. OSS default `lib/storage/` keeps one JSON file per
@@ -139,9 +152,10 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 - **Public pages**: `publicPages` are server components for guests. Id `home` renders on `/`
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
   in `components/public/public-shell.tsx`; `footerLabel` adds a link to the public footer.
-- **DI Container** (`lib/container.ts`): ten strategy slots — `providerResolver`, `modelFactory`,
+- **DI Container** (`lib/container.ts`): twelve strategy slots — `providerResolver`, `modelFactory`,
   `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `spendingGuard`, `userLifecycle`, `webToolsProvider`,
-  `reasoningOptionsProvider`, `documentStore`.
+  `reasoningOptionsProvider`, `documentStore`, `mailer`, `registrationPolicy`.
+  `userLifecycle.onUserCreated?` fires for accounts added by an admin or created by sign-up.
   `lib/plugin-loader.ts` registers OSS defaults first; plugins override. Last register wins.
 - **Adding New Plugins** (no core files to edit):
   1. Create folder `extensions/plugins/{plugin}/`, implement `Plugin`, register in `extensions/index.ts`.
@@ -151,7 +165,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `lib/generated/plugin-slots.ts` (gitignored) with literal dynamic imports.
   `PluginSlot` in `lib/plugin-ui.tsx` consumes that map and renders `fallback`
   for slots no plugin fills. With `ENABLE_PLUGINS=false` the map is empty,
-  so plugin components are never bundled.
+  so plugin components are never bundled. The login page hosts `login-legal` and
+  `login-request-access`; guests read `/api/plugins/capabilities` with slot ids only.
 - **Plugin Bridge**: `lib/plugins.ts` loads the registry from `@plugins` and exposes
   `adminTabs` / `uiSlots` / `apiRoutes`. When the submodule is absent, `lib/plugin-stub.ts`
   supplies an empty plugins array.

@@ -10,6 +10,10 @@ const publicPaths = [
   "/requisites",
   "/info/",
   "/api/auth/login",
+  "/api/auth/email/",
+  "/api/auth/password/reset",
+  // Guests need it for plugin slots on the login page; the route trims the answer for them
+  "/api/plugins/capabilities",
   // Acquirer webhook, authenticated by its own signature
   "/api/payments/notify",
   "/manifest.json",
@@ -46,10 +50,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Attach user info to headers for server components
+    // Attach user info to headers for server components; never the name — header values must be ASCII
     const response = NextResponse.next();
     response.headers.set("x-user-id", payload.userId as string);
-    response.headers.set("x-user-name", payload.name as string);
     response.headers.set("x-user-role", payload.role as string);
     return response;
   } catch {

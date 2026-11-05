@@ -10,49 +10,69 @@ import {
 } from "@/lib/auth";
 import type { User, UserRole } from "@/lib/auth";
 import { initializeContainer, container } from "@/lib/plugin-loader";
+import { DuplicateKeyError } from "@/lib/storage/errors";
+import { normalizeEmail } from "@/lib/sign-in/email";
 
 initializeContainer();
 
 const COOKIE_NAME = "session";
 const ROLES: UserRole[] = ["admin", "user"];
 
-const FORBIDDEN = NextResponse.json({ error: "Доступ запрещён" }, { status: 403 });
+const forbidden = () => NextResponse.json({ error: "Доступ запрещён" }, { status: 403 });
+const badEmail = () => NextResponse.json({ error: "Некорректный email" }, { status: 400 });
+const emailTaken = () => NextResponse.json({ error: "Этот email уже занят" }, { status: 409 });
 
 function adminToken(request: NextRequest): string | undefined {
   return request.cookies.get(COOKIE_NAME)?.value;
 }
 
-// Get all users (admin only)
-export async function GET(request: NextRequest) {
-  const admin = await authorizeAdmin(adminToken(request));
-  if (!admin) return FORBIDDEN;
-
-  const users = (await getUsers()).map((u) => ({
+function publicUser(u: User) {
+  return {
     id: u.id,
     name: u.name,
     role: u.role,
-  }));
-  return NextResponse.json({ users });
+    email: u.email,
+    emailVerified: Boolean(u.emailVerifiedAt),
+    hasPassword: Boolean(u.password),
+  };
 }
 
-// Add a new user (admin only)
+function isEmailConflict(err: unknown): boolean {
+  return err instanceof DuplicateKeyError && err.fields.includes("email");
+}
+
+/** Empty string = no email; undefined = invalid */
+function parseEmail(value: unknown): string | null | undefined {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  return normalizeEmail(value) ?? undefined;
+}
+
+// Get all users (admin only)
+export async function GET(request: NextRequest) {
+  const admin = await authorizeAdmin(adminToken(request));
+  if (!admin) return forbidden();
+
+  return NextResponse.json({ users: (await getUsers()).map(publicUser) });
+}
+
+// Add a new user (admin only); without a password the user signs in by email code
 export async function POST(request: NextRequest) {
   const admin = await authorizeAdmin(adminToken(request));
-  if (!admin) return FORBIDDEN;
+  if (!admin) return forbidden();
 
-  const { name, password, role } = await request.json();
-  if (!name || !password) {
+  const { name: rawName, email: rawEmail, password, role } = await request.json();
+  const name = typeof rawName === "string" ? rawName.trim() : "";
+  const email = parseEmail(rawEmail);
+  if (email === undefined) return badEmail();
+  if (!name || (!password && !email)) {
     return NextResponse.json(
-      { error: "Имя и пароль обязательны" },
+      { error: "Укажите имя и пароль или email" },
       { status: 400 }
     );
   }
 
   const users = await getUsers();
-  const exists = users.find(
-    (u) => u.name.toLowerCase() === name.toLowerCase()
-  );
-  if (exists) {
+  if (users.some((u) => u.name.toLowerCase() === name.toLowerCase())) {
     return NextResponse.json(
       { error: "Пользователь с таким именем уже существует" },
       { status: 409 }
@@ -62,22 +82,31 @@ export async function POST(request: NextRequest) {
   const newUser: User = {
     id: String(Date.now()),
     name,
-    password: hashPassword(password),
+    ...(email ? { email } : {}),
+    ...(password ? { password: hashPassword(password) } : {}),
     role: ROLES.includes(role) ? role : "user",
     sessionVersion: 1,
   };
 
-  await createUser(newUser);
+  try {
+    await createUser(newUser);
+  } catch (err) {
+    if (isEmailConflict(err)) return emailTaken();
+    throw err;
+  }
 
-  return NextResponse.json({
-    user: { id: newUser.id, name: newUser.name, role: newUser.role },
-  });
+  await container.get("userLifecycle").onUserCreated?.(
+    { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role },
+    { source: "admin" },
+  );
+
+  return NextResponse.json({ user: publicUser(newUser) });
 }
 
 // Delete user (admin only)
 export async function DELETE(request: NextRequest) {
   const admin = await authorizeAdmin(adminToken(request));
-  if (!admin) return FORBIDDEN;
+  if (!admin) return forbidden();
 
   const { id } = await request.json();
   if (!id) {
@@ -107,20 +136,24 @@ export async function DELETE(request: NextRequest) {
 }
 
 /**
- * Update a user (admin only): reset the password or change the role.
- * Both invalidate the user's existing sessions.
+ * Update a user (admin only): reset the password, change the role or the email.
+ * A password or role change invalidates the user's existing sessions.
  */
 export async function PATCH(request: NextRequest) {
   const admin = await authorizeAdmin(adminToken(request));
-  if (!admin) return FORBIDDEN;
+  if (!admin) return forbidden();
 
-  const { id, newPassword, role } = await request.json();
-  if (!id || (!newPassword && !role)) {
+  const body = await request.json();
+  const { id, newPassword, role } = body;
+  const emailGiven = "email" in body;
+  if (!id || (!newPassword && !role && !emailGiven)) {
     return NextResponse.json(
-      { error: "Нужен новый пароль или роль" },
+      { error: "Нужен новый пароль, роль или email" },
       { status: 400 }
     );
   }
+  const email = emailGiven ? parseEmail(body.email) : null;
+  if (email === undefined) return badEmail();
 
   const users = await getUsers();
   const user = users.find((u) => u.id === id);
@@ -131,7 +164,7 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  if (role) {
+  if (role && role !== user.role) {
     if (!ROLES.includes(role)) {
       return NextResponse.json({ error: "Неизвестная роль" }, { status: 400 });
     }
@@ -152,20 +185,31 @@ export async function PATCH(request: NextRequest) {
       );
     }
     user.role = role;
+    bumpSessionVersion(user);
   }
 
   if (newPassword) {
     user.password = hashPassword(newPassword);
+    bumpSessionVersion(user);
   }
 
-  bumpSessionVersion(user);
-  await updateUser(user.id, {
-    role: user.role,
-    password: user.password,
-    sessionVersion: user.sessionVersion,
-  });
+  const changes: Partial<User> = { role: user.role, sessionVersion: user.sessionVersion };
+  if (user.password) changes.password = user.password;
+  const unset: Array<"email" | "emailVerifiedAt"> = [];
+  if (emailGiven && email !== (user.email ?? null)) {
+    // A new address is unconfirmed until its first code sign-in
+    unset.push("emailVerifiedAt");
+    if (email) changes.email = email;
+    else unset.push("email");
+  }
 
-  return NextResponse.json({
-    user: { id: user.id, name: user.name, role: user.role },
-  });
+  let updated: User | undefined;
+  try {
+    updated = await updateUser(user.id, changes, unset);
+  } catch (err) {
+    if (isEmailConflict(err)) return emailTaken();
+    throw err;
+  }
+
+  return NextResponse.json({ user: publicUser(updated ?? user) });
 }
