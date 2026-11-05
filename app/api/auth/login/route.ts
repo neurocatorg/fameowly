@@ -1,65 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  findUserByName,
-  verifyPassword,
-  createSession,
-  isLegacyHash,
-  hashPassword,
-  updateUser,
-} from "@/lib/auth";
+import { clientIp } from "@/lib/sign-in/client-ip";
+import { readBody, signInError, signedIn } from "@/lib/sign-in/http";
+import { signInWithPassword } from "@/lib/sign-in/password-sign-in";
 
-const COOKIE_NAME = "session";
-
+/** POST /api/auth/login { name, password } — `name` is a display name or an email */
 export async function POST(request: NextRequest) {
   try {
-    const { name, password } = await request.json();
-
-    if (!name || !password) {
-      return NextResponse.json(
-        { error: "Имя и пароль обязательны" },
-        { status: 400 }
-      );
+    const body = await readBody(request);
+    const login = typeof body.name === "string" ? body.name : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!login.trim() || !password) {
+      return NextResponse.json({ error: "Логин и пароль обязательны" }, { status: 400 });
     }
 
-    const user = await findUserByName(name);
-    if (!user || !verifyPassword(password, user.password)) {
-      return NextResponse.json(
-        { error: "Неверное имя или пароль" },
-        { status: 401 }
-      );
+    const result = await signInWithPassword(login, password, clientIp(request.headers));
+    if ("error" in result) {
+      if (result.error === "limited") return signInError("limited");
+      return NextResponse.json({ error: "Неверный логин или пароль" }, { status: 401 });
     }
-
-    // Upgrade pre-salt hashes now that we have the plaintext
-    if (isLegacyHash(user.password)) {
-      user.password = hashPassword(password);
-      user.sessionVersion = user.sessionVersion ?? 1;
-      await updateUser(user.id, {
-        password: user.password,
-        sessionVersion: user.sessionVersion,
-      });
-    }
-
-    const token = await createSession(user);
-
-    const response = NextResponse.json({
-      success: true,
-      user: { id: user.id, name: user.name, role: user.role },
-    });
-
-    response.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
-
-    return response;
+    return signedIn(result.user);
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { error: "Ошибка сервера" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }

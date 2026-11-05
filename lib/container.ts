@@ -17,6 +17,8 @@ import type {
   WebToolsProvider,
   ReasoningOptionsProvider,
   DocumentStore,
+  Mailer,
+  RegistrationPolicy,
 } from "./contracts";
 
 export interface ServiceMap {
@@ -30,6 +32,8 @@ export interface ServiceMap {
   webToolsProvider: WebToolsProvider;
   reasoningOptionsProvider: ReasoningOptionsProvider;
   documentStore: DocumentStore;
+  mailer: Mailer;
+  registrationPolicy: RegistrationPolicy;
 }
 
 /** Registry surface exposed to plugins during register() */

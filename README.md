@@ -36,7 +36,8 @@ Its main trick: **every outgoing request to an LLM provider can go through a SOC
 
 - **SOCKS5 proxy for provider traffic**: set `SOCKS_PROXY` (or `ALL_PROXY` / `HTTPS_PROXY`) and all provider calls, including streaming, are tunneled through it. Everything else stays on the direct route.
 - **Zero-database**: users, chats and uploads are plain JSON files under `data/`.
-- **Shared keys**: OpenRouter, Google AI Studio and local LLaMA-compatible endpoints are configured once by the host; users sign in with local passwords.
+- **Shared keys**: OpenRouter, Google AI Studio and local LLaMA-compatible endpoints are configured once by the host.
+- **Sign-in**: by a one-time code sent to the user's email, or by name/email and password; password recovery by email. Accounts are added by the admin, with an email, a password or both.
 - **Admin panel**: built-in UI for creating users and managing access.
 - **Multimodal**: image and file attachments in chat, plus a dedicated image generation mode.
 - **Rich rendering**: Markdown, LaTeX and syntax-highlighted code blocks.
@@ -83,6 +84,26 @@ SOCKS_PROXY=socks5://127.0.0.1:1080
 ```
 
 The proxy is read from `SOCKS_PROXY`, `ALL_PROXY`, `HTTPS_PROXY` or `HTTP_PROXY`, in that order; the value must use a `socks` scheme. Leave them unset to connect directly.
+
+### Mail and sign-in by email
+
+```env
+SMTP_URL=smtps://user:password@mail.example.com:465
+MAIL_FROM=FaMeowly <noreply@example.com>
+# Optional: secret for login code hashes (defaults to JWT_SECRET)
+AUTH_CODE_SECRET=
+# Optional: number of reverse proxies in front of the hub; enables per-IP limits
+TRUSTED_PROXY_HOPS=1
+```
+
+With mail configured, the login page asks for an email and sends an 8-digit code
+(valid 10 minutes, 5 attempts, a new one after 45 seconds, a few per hour); a
+password is optional. Without `SMTP_URL`, `npm run dev` prints the messages to the
+server log and a production server offers password sign-in only. Codes are sent
+only to existing accounts, and the reply never tells whether an account exists.
+`TRUSTED_PROXY_HOPS` must match the real proxy chain: the client address is taken
+from `X-Forwarded-For` that many entries from the right; leave it unset when the
+hub cannot see client addresses.
 
 ### Company details
 

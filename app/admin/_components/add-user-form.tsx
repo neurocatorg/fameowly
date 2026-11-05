@@ -4,18 +4,20 @@ import { useState, useRef, useCallback } from "react";
 import { UserPlus } from "lucide-react";
 import { PluginSlot } from "@/lib/plugin-ui";
 import { inputCls, selectCls, labelCls, btnPrimary, cardCls } from "@/lib/ui-classes";
+import type { NewUser } from "./types";
 
 type Commit = (userId?: string) => Promise<void>;
 
 interface AddUserFormProps {
   /** Returns the new user id, or null when creation failed */
-  onCreate: (name: string, password: string, role: "user" | "admin") => Promise<string | null>;
+  onCreate: (user: NewUser) => Promise<string | null>;
   /** Called once the profile of the new user has been written too */
   onDone: () => void;
 }
 
 export function AddUserForm({ onCreate, onDone }: AddUserFormProps) {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"user" | "admin">("user");
   const [formKey, setFormKey] = useState(0);
@@ -27,13 +29,14 @@ export function AddUserForm({ onCreate, onDone }: AddUserFormProps) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const userId = await onCreate(name, password, role);
+    const userId = await onCreate({ name, email, password, role });
     if (!userId) return;
 
     if (role !== "admin") await pluginCommit.current?.(userId);
     onDone();
 
     setName("");
+    setEmail("");
     setPassword("");
     setRole("user");
     setFormKey((k) => k + 1);
@@ -47,7 +50,7 @@ export function AddUserForm({ onCreate, onDone }: AddUserFormProps) {
       </h2>
 
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className={labelCls}>Имя</label>
             <input
@@ -60,13 +63,23 @@ export function AddUserForm({ onCreate, onDone }: AddUserFormProps) {
             />
           </div>
           <div>
+            <label className={labelCls}>Email</label>
+            <input
+              type="email"
+              placeholder="Для входа по коду"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div>
             <label className={labelCls}>Пароль</label>
             <input
               type="text"
-              placeholder="Пароль"
+              placeholder={email ? "Необязательно" : "Пароль"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              required={!email.trim()}
               className={inputCls}
             />
           </div>
