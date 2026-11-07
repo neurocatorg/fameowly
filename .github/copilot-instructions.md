@@ -36,6 +36,7 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   - (image)/_components/ # Image generation mode components
   - (video)/_components/ # Video mode components (placeholder, feature pending)
   - print/[chatId]/ # Printable chat transcript (PDF export via browser print)
+  - profile/ # Own account: name, email (bind/change by code), password; plugin slots for balance
   - requisites/ # Public company details page, from `COMPANY_*` env (404 when unset)
   - info/[page]/ # Host for plugin public pages (`Plugin.publicPages`), open to guests
 - api/ # API routes (chat, image, upload, auth, etc.)
@@ -70,6 +71,15 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   Self-service registration is implemented by a plugin through `registrationPolicy`
   (its form fills the `login-request-access` slot; public delegator `/api/auth/access-request`).
   `/login?email=` pre-fills the address, so mail can link straight to sign-in.
+  Profile (`/profile`): `PATCH /api/profile` renames (names stay unique: legacy sign-in uses
+  them); `/api/profile/email/{start,verify}` binds or changes the email with a `verify_email`
+  code sent to the new address and bound to the account ("address taken" only after a correct
+  code); `POST /api/auth/password` sets a first password without proof, otherwise needs the
+  current one or a `reset_password` code, and bumps `sessionVersion` (this device is re-issued).
+- **Payment required (402)**: `/api/chat` and `/api/image` answer 402 when `spendingGuard`
+  refuses. The chat client takes the unsent message back out of the chat (a chat created by it
+  stays, empty) and returns text and attachments to the input; image mode keeps prompt and
+  references. `components/payment-required.tsx` shows the `payment-required` slot, or a toast.
 - **Mail**: `mailer` slot; OSS default sends via `nodemailer` when `SMTP_URL` + `MAIL_FROM`
   are set, prints to the log in development, and is unavailable in production otherwise
   (the login page then shows the password form only).
@@ -170,6 +180,9 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   for slots no plugin fills. With `ENABLE_PLUGINS=false` the map is empty,
   so plugin components are never bundled. The login page hosts `login-legal` and
   `login-request-access`; guests read `/api/plugins/capabilities` with slot ids only.
+  `/profile` hosts `profile-balance` and `profile-payments`; empty chat and image screens host
+  `chat-empty-notice`; the app hosts `payment-required` and `onboarding` (state behind the
+  delegated `/api/onboarding`).
 - **Plugin Bridge**: `lib/plugins.ts` loads the registry from `@plugins` and exposes
   `adminTabs` / `uiSlots` / `apiRoutes`. When the submodule is absent, `lib/plugin-stub.ts`
   supplies an empty plugins array.

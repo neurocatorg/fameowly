@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { PluginSlot } from "@/lib/plugin-ui";
 import type { SystemPromptPreset } from "@/lib/types";
 
 interface ChatEmptyStateProps {
@@ -24,6 +25,7 @@ export function ChatEmptyState({
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
       <h2 className="text-[24px] font-semibold leading-[1.4] text-th-fg">Начнем?</h2>
+      <PluginSlot id="chat-empty-notice" />
 
       {/* System prompt presets */}
       <div className="w-full max-w-2xl px-4">

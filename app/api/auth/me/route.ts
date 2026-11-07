@@ -11,6 +11,13 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    user: { id: user.id, name: user.name, role: user.role, email: user.email },
+    user: {
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      email: user.email,
+      emailVerified: Boolean(user.emailVerifiedAt),
+      hasPassword: Boolean(user.password),
+    },
   });
 }

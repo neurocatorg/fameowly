@@ -8,6 +8,8 @@ import { ChatView } from "@/app/(chat)/_components/chat-view";
 import { ImageView } from "@/app/(image)/_components/image-view";
 import { VideoView } from "@/app/(video)/_components/video-view";
 import { ChatErrorBoundary } from "@/components/chat-error-boundary";
+import { PaymentRequired } from "@/components/payment-required";
+import { PluginSlot } from "@/lib/plugin-ui";
 import { usePageState } from "@/hooks/use-page-state";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { useTheme } from "@/hooks/use-theme";
@@ -146,6 +148,9 @@ function ChatPage() {
           {s.mode === "video" && <VideoView />}
         </ChatErrorBoundary>
       </main>
+
+      <PaymentRequired reason={s.paymentRequired} onClose={s.dismissPaymentRequired} />
+      <PluginSlot id="onboarding" />
     </div>
   );
 }
