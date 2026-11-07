@@ -20,10 +20,12 @@ interface UseChatStreamingParams {
   createNewChat: (modelId: string, systemPrompt?: string) => Promise<string | null>;
   persistMessages: (chatId: string, msgs: MessageData[]) => Promise<void>;
   chatSystemPrompt: string | undefined;
+  /** 402: the message is taken back out of the chat and returned for the input */
+  onPaymentRequired?: (reason: string, text: string) => void;
 }
 
 export function useChatStreaming(params: UseChatStreamingParams) {
-  const { setMessages, activeChatIdRef, messagesRef, createNewChat, persistMessages, chatSystemPrompt } = params;
+  const { setMessages, activeChatIdRef, messagesRef, createNewChat, persistMessages, chatSystemPrompt, onPaymentRequired } = params;
   const [status, setStatus] = useState<ChatStatus>("ready");
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -44,7 +46,8 @@ export function useChatStreaming(params: UseChatStreamingParams) {
     setMessages((prev) => [...prev, userMsg]);
     setStatus("submitted"); setError(null);
 
-    const allMsgs = [...messagesRef.current, userMsg];
+    const before = messagesRef.current;
+    const allMsgs = [...before, userMsg];
 
     // BUG-04: Persist user message immediately (before API call).
     // Ensures the chat is saved even if the AI never responds or user closes the tab.
@@ -67,6 +70,13 @@ export function useChatStreaming(params: UseChatStreamingParams) {
         signal: controller.signal,
       });
 
+      if (response.status === 402 && onPaymentRequired) {
+        const { error: reason } = await response.json().catch(() => ({}));
+        messagesRef.current = before; setMessages(before);
+        await persistMessages(chatId, before);
+        setStatus("ready"); onPaymentRequired(reason || "Не хватает денег на этот ответ", text);
+        return;
+      }
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.error || `Ошибка сервера: ${response.status}`);
@@ -120,7 +130,7 @@ export function useChatStreaming(params: UseChatStreamingParams) {
       });
       setStatus("error");
     } finally { abortRef.current = null; }
-  }, [activeChatIdRef, messagesRef, createNewChat, persistMessages, chatSystemPrompt, setMessages]);
+  }, [activeChatIdRef, messagesRef, createNewChat, persistMessages, chatSystemPrompt, setMessages, onPaymentRequired]);
 
   const stop = useCallback(() => { abortRef.current?.abort(); setStatus("ready"); }, []);
 

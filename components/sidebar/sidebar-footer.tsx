@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Settings, LogOut, Github, BarChart2, type LucideIcon } from "lucide-react";
+import { Settings, LogOut, Github, BarChart2, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserInfo } from "@/hooks/use-user-info";
 import { usePluginCapabilities } from "@/hooks/use-plugin-capabilities";
@@ -44,6 +44,7 @@ export function SidebarFooter({ compact, className }: SidebarFooterProps) {
 
   // Item count varies by edition (usage-page slot) and role — both renderings share it
   const items: FooterItem[] = [
+    { key: "profile", icon: UserRound, label: "Профиль", onClick: () => router.push("/profile") },
     ...(uiSlots.includes("usage-page")
       ? [{ key: "usage", icon: BarChart2, label: "Потребление", onClick: () => router.push("/usage") }]
       : []),

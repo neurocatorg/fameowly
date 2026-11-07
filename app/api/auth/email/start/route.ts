@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse, after } from "next/server";
-import { container, initializeContainer } from "@/lib/plugin-loader";
+import { NextRequest, NextResponse } from "next/server";
 import { clientIp } from "@/lib/sign-in/client-ip";
 import { normalizeEmail } from "@/lib/sign-in/email";
 import { startEmailCode } from "@/lib/sign-in/email-code-flow";
-import { readBody, signInError } from "@/lib/sign-in/http";
+import { cooldownError, mailAfterResponse, readBody, signInError } from "@/lib/sign-in/http";
 
 /** POST /api/auth/email/start { email, purpose? } — send a login or password reset code */
 export async function POST(request: NextRequest) {
@@ -19,24 +18,12 @@ export async function POST(request: NextRequest) {
     case "limited":
       return signInError("limited");
     case "cooldown":
-      return NextResponse.json(
-        { error: `Отправить код снова можно через ${result.retryAfter} с`, retryAfter: result.retryAfter },
-        { status: 429 },
-      );
+      return cooldownError(result.retryAfter);
     case "request-access":
       return NextResponse.json({ next: "request-access" });
   }
 
-  const { mail } = result;
-  if (mail) {
-    initializeContainer();
-    const mailer = container.get("mailer");
-    after(() =>
-      mailer.send(mail).catch((err: unknown) => {
-        console.error("[mail] send failed:", err instanceof Error ? err.message : err);
-      }),
-    );
-  }
+  if (result.mail) mailAfterResponse(result.mail);
   return NextResponse.json({
     next: "code",
     resendIn: result.resendIn,

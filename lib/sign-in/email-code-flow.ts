@@ -29,6 +29,21 @@ export type StartResult =
 
 export type VerifyResult = { user: User } | { error: "invalid" | "limited" };
 
+type SendRefusal = Extract<StartResult, { status: "cooldown" | "limited" }>;
+
+/** Limits apply to every address, so a 429 says nothing about an account */
+export async function claimSendLimits(email: string, ip: string | null): Promise<SendRefusal | null> {
+  const retryAfter = await claimCooldown("send", email, L.RESEND_COOLDOWN_SECONDS);
+  if (retryAfter > 0) return { status: "cooldown", retryAfter };
+  if (!(await consumeLimit("send-email", email, L.HOUR_SECONDS, L.SENDS_PER_EMAIL_PER_HOUR))) {
+    return { status: "limited" };
+  }
+  if (ip && !(await consumeLimit("send-ip", ip, L.HOUR_SECONDS, L.SENDS_PER_IP_PER_HOUR))) {
+    return { status: "limited" };
+  }
+  return null;
+}
+
 export async function startEmailCode(
   email: string,
   purpose: Extract<CodePurpose, "login" | "reset_password">,
@@ -43,15 +58,8 @@ export async function startEmailCode(
     return { status: "request-access" };
   }
 
-  // Limits apply to every address, so a 429 says nothing about an account
-  const retryAfter = await claimCooldown("send", email, L.RESEND_COOLDOWN_SECONDS);
-  if (retryAfter > 0) return { status: "cooldown", retryAfter };
-  if (!(await consumeLimit("send-email", email, L.HOUR_SECONDS, L.SENDS_PER_EMAIL_PER_HOUR))) {
-    return { status: "limited" };
-  }
-  if (ip && !(await consumeLimit("send-ip", ip, L.HOUR_SECONDS, L.SENDS_PER_IP_PER_HOUR))) {
-    return { status: "limited" };
-  }
+  const refusal = await claimSendLimits(email, ip);
+  if (refusal) return refusal;
 
   const reply = {
     status: "code" as const,
@@ -65,7 +73,7 @@ export async function startEmailCode(
   return { ...reply, mail: codeMessage(purpose, email, code) };
 }
 
-async function checkCode(purpose: CodePurpose, email: string, code: string, ip: string | null) {
+export async function checkCode(purpose: CodePurpose, email: string, code: string, ip: string | null) {
   if (ip && (await isLimited("code-fail-ip", ip, L.HOUR_SECONDS, L.CODE_FAILURES_PER_IP_PER_HOUR))) {
     return "limited" as const;
   }

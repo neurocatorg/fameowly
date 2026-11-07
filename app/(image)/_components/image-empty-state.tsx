@@ -1,4 +1,5 @@
 import { ImageIcon } from "lucide-react";
+import { PluginSlot } from "@/lib/plugin-ui";
 
 /** Empty state for image generation mode */
 export function ImageEmptyState() {
@@ -19,6 +20,7 @@ export function ImageEmptyState() {
           Можно прикрепить до 10 файлов или вставить через Ctrl+V
         </p>
       </div>
+      <PluginSlot id="chat-empty-notice" />
     </div>
   );
 }

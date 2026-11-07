@@ -11,6 +11,7 @@ import { useImageGeneration } from "./use-image-generation";
 import { useImageHistory } from "./use-image-history";
 import { useModels } from "./use-models";
 import { useChatSettings } from "./use-chat-settings";
+import { usePaymentRequired } from "./use-payment-required";
 
 export function usePageState() {
   const searchParams = useSearchParams();
@@ -29,7 +30,9 @@ export function usePageState() {
   const [showAllChats, setShowAllChats] = useState(false);
   const [input, setInput] = useState("");
 
-  const chat = usePersistentChat();
+  const fileUpload = useFileUpload(mode);
+  const payment = usePaymentRequired(setInput, fileUpload.setPendingAttachments);
+  const chat = usePersistentChat(payment.onChatRefused);
 
   // Per-chat settings (Task 4: persisted in localStorage per chat)
   const {
@@ -59,12 +62,12 @@ export function usePageState() {
   const supportsReasoning = selectedModel.supportsReasoning ?? false;
   const supportsWebSearch = selectedModel.supportsWebSearch ?? false;
 
-  const fileUpload = useFileUpload(mode);
   const imageGen = useImageGeneration({
     selectedImageModel,
     imageRefAttachments: fileUpload.imageRefAttachments,
     setImageRefAttachments: fileUpload.setImageRefAttachments,
     loadImageHistory,
+    onPaymentRequired: payment.onImageRefused,
   });
 
   // Route sync: read URL on mount
@@ -124,9 +127,10 @@ export function usePageState() {
       webSearchEnabled: supportsWebSearch && webSearchEnabled,
     };
 
+    payment.rememberDraft(input, fileUpload.pendingAttachments);
     chat.sendMessage(input, selectedModel, attachments.length ? attachments : undefined, sp, localOptions);
     setInput(""); fileUpload.setPendingAttachments([]);
-  }, [input, isLoading, modelUnavailable, fileUpload, chat, currentSystemPrompt, supportsTemperature, supportsReasoning, supportsWebSearch, temperature, reasoningEnabled, webSearchEnabled, selectedModel]);
+  }, [input, isLoading, modelUnavailable, fileUpload, chat, payment, currentSystemPrompt, supportsTemperature, supportsReasoning, supportsWebSearch, temperature, reasoningEnabled, webSearchEnabled, selectedModel]);
 
   const handleNewChat = useCallback(() => {
     chat.clearChat(); setSelectedPresetId("default"); setCustomSystemPrompt("");
@@ -182,6 +186,7 @@ export function usePageState() {
     webSearchEnabled, handleWebSearchToggle,
     supportsTemperature, supportsReasoning, supportsWebSearch,
     ...fileUpload, ...imageGen, imageHistory,
+    paymentRequired: payment.reason, dismissPaymentRequired: payment.dismiss,
     handleChatSubmit, handleNewChat, handleSelectChat, handleSelectImageItem, handleNewImageGeneration,
   };
 }

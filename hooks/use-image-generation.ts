@@ -8,10 +8,12 @@ interface UseImageGenerationParams {
   imageRefAttachments: PendingAttachment[];
   setImageRefAttachments: React.Dispatch<React.SetStateAction<PendingAttachment[]>>;
   loadImageHistory: () => Promise<void>;
+  /** 402: the prompt and references stay for another try */
+  onPaymentRequired?: (reason: string) => void;
 }
 
 export function useImageGeneration(params: UseImageGenerationParams) {
-  const { selectedImageModel, imageRefAttachments, setImageRefAttachments, loadImageHistory } = params;
+  const { selectedImageModel, imageRefAttachments, setImageRefAttachments, loadImageHistory, onPaymentRequired } = params;
 
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           type: pa.uploaded!.type,
         }));
 
+      let keepDraft = false;
       try {
         const res = await fetch("/api/image", {
           method: "POST",
@@ -54,7 +57,10 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           }),
         });
         const data = await res.json();
-        if (!res.ok) {
+        if (res.status === 402 && onPaymentRequired) {
+          keepDraft = true;
+          onPaymentRequired(data.error || "Не хватает денег на этот ответ");
+        } else if (!res.ok) {
           setImageError(data.error || "Ошибка генерации");
         } else {
           setImageUrl(data.imageUrl);
@@ -66,12 +72,14 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         setImageError("Ошибка сети");
       } finally {
         setImageLoading(false);
-        setImageRefAttachments([]);
-        setImagePrompt("");
+        if (!keepDraft) {
+          setImageRefAttachments([]);
+          setImagePrompt("");
+        }
         await loadImageHistory();
       }
     },
-    [imagePrompt, imageRefAttachments, selectedImageModel, imageAspectRatio, imageResolution, setImageRefAttachments, loadImageHistory]
+    [imagePrompt, imageRefAttachments, selectedImageModel, imageAspectRatio, imageResolution, setImageRefAttachments, loadImageHistory, onPaymentRequired]
   );
 
   const deleteImageHistoryItem = useCallback(

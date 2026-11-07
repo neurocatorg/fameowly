@@ -5,7 +5,7 @@ import { useChatApi } from "./use-chat-api";
 import { useChatMessages } from "./use-chat-messages";
 import { useChatStreaming } from "./use-chat-streaming";
 
-export function usePersistentChat() {
+export function usePersistentChat(onPaymentRequired?: (reason: string, text: string) => void) {
   const chatApi = useChatApi();
   const chatMessages = useChatMessages({
     activeChatId: chatApi.activeChatId,
@@ -23,6 +23,7 @@ export function usePersistentChat() {
     createNewChat: chatApi.createNewChat,
     persistMessages: chatApi.persistMessages,
     chatSystemPrompt: chatApi.chatSystemPrompt,
+    onPaymentRequired,
   });
 
   // loadChat needs to update messages state from chatMessages

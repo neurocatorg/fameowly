@@ -1,57 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   authorize,
-  updateUser,
-  hashPassword,
-  verifyPassword,
-  bumpSessionVersion,
   createSession,
+  MIN_PASSWORD_LENGTH,
+  setSessionCookie,
+  setUserPassword,
+  verifyPassword,
 } from "@/lib/auth";
+import { normalizeCode } from "@/lib/sign-in/auth-codes";
+import { clientIp } from "@/lib/sign-in/client-ip";
+import { checkCode } from "@/lib/sign-in/email-code-flow";
+import { readBody, signInError } from "@/lib/sign-in/http";
 
-const COOKIE_NAME = "session";
-const MIN_LENGTH = 6;
-
-/** POST /api/auth/password — change your own password */
+/**
+ * POST /api/auth/password { newPassword, currentPassword?, code? } — set your own password.
+ * A first password needs nothing else; a change needs the current one or a `reset_password` code.
+ */
 export async function POST(request: NextRequest) {
-  const account = await authorize(request.cookies.get(COOKIE_NAME)?.value);
-  if (!account) {
-    return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-  }
+  const user = await authorize(request.cookies.get("session")?.value);
+  if (!user) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-  const { currentPassword, newPassword } = await request.json();
-  if (!currentPassword || !newPassword) {
+  const body = await readBody(request);
+  const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
     return NextResponse.json(
-      { error: "Укажите текущий и новый пароль" },
-      { status: 400 }
-    );
-  }
-  if (newPassword.length < MIN_LENGTH) {
-    return NextResponse.json(
-      { error: `Минимальная длина пароля — ${MIN_LENGTH} символов` },
-      { status: 400 }
+      { error: `Минимальная длина пароля — ${MIN_PASSWORD_LENGTH} символов` },
+      { status: 400 },
     );
   }
 
-  const user = account;
-  if (!verifyPassword(currentPassword, user.password)) {
-    return NextResponse.json({ error: "Текущий пароль неверен" }, { status: 403 });
+  if (user.password) {
+    const code = normalizeCode(body.code);
+    if (code && user.email) {
+      const check = await checkCode("reset_password", user.email, code, clientIp(request.headers));
+      if (check !== "ok") return signInError(check === "limited" ? "limited" : "code");
+    } else if (typeof body.currentPassword !== "string" || !verifyPassword(body.currentPassword, user.password)) {
+      return NextResponse.json({ error: "Текущий пароль неверен" }, { status: 403 });
+    }
   }
 
-  user.password = hashPassword(newPassword);
-  bumpSessionVersion(user);
-  await updateUser(user.id, {
-    password: user.password,
-    sessionVersion: user.sessionVersion,
-  });
-
-  // Re-issue the caller's own session so the password change does not log them out
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(COOKIE_NAME, await createSession(user), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-  return response;
+  // Other devices are signed out; this one gets a fresh session
+  await setUserPassword(user, newPassword);
+  await setSessionCookie(await createSession(user));
+  return NextResponse.json({ success: true });
 }

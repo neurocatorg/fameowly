@@ -29,6 +29,8 @@ export interface UserInfo {
   name: string;
   role: UserRole;
   email?: string;
+  emailVerified?: boolean;
+  hasPassword?: boolean;
 }
 
 export interface PendingAttachment {
