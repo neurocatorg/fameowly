@@ -164,7 +164,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   Behaviour changes go through `register(container)` — never through ad-hoc hooks.
 - **Public pages**: `publicPages` are server components for guests. Id `home` renders on `/`
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
-  in `components/public/public-shell.tsx`; `footerLabel` adds a link to the public footer.
+  in `components/public/public-shell.tsx` («Войти», or «Открыть FaMeowly» for a signed-in visitor);
+  `footerLabel` adds a link to the public footer. Pages read the session themselves when needed.
 - **DI Container** (`lib/container.ts`): twelve strategy slots — `providerResolver`, `modelFactory`,
   `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `spendingGuard`, `userLifecycle`, `webToolsProvider`,
   `reasoningOptionsProvider`, `documentStore`, `mailer`, `registrationPolicy`.
