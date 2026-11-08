@@ -70,7 +70,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `registrationPolicy.canCreateUser` allows it at code verification (OSS: never).
   Self-service registration is implemented by a plugin through `registrationPolicy`
   (its form fills the `login-request-access` slot; public delegator `/api/auth/access-request`).
-  `/login?email=` pre-fills the address, so mail can link straight to sign-in.
+  `/login?email=` pre-fills the address, so mail can link straight to sign-in; `/login?next=<path>` returns
+  to a same-site path after sign-in (a single leading `/`, no backslashes or whitespace, else `/`).
   Profile (`/profile`): `PATCH /api/profile` renames (names stay unique: legacy sign-in uses
   them); `/api/profile/email/{start,verify}` binds or changes the email with a `verify_email`
   code sent to the new address and bound to the account ("address taken" only after a correct
@@ -160,8 +161,11 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
 
 ## Plugin System
 
-- **Plugin Interface** (`lib/types.ts`): `id`, `name`, `register`, `adminTabs`, `uiSlots`, `apiRoutes`, `publicPages`.
-  Behaviour changes go through `register(container)` — never through ad-hoc hooks.
+- **Plugin Interface** (`lib/types.ts`): `id`, `name`, `register`, `adminTabs`, `uiSlots`, `apiRoutes`, `publicPages`,
+  `onServerStart`. Behaviour changes go through `register(container)` — never through ad-hoc hooks.
+- **Background tasks**: `instrumentation.ts` (Node.js runtime) calls `startPluginBackgroundTasks()` from
+  `lib/plugin-loader.ts`, which runs every plugin's optional `onServerStart` once per process. Several processes
+  may run it, so a plugin job takes its own lease in the `documentStore`.
 - **Public pages**: `publicPages` are server components for guests. Id `home` renders on `/`
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
   in `components/public/public-shell.tsx` («Войти», or «Открыть FaMeowly» for a signed-in visitor);

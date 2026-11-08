@@ -5,6 +5,9 @@ import { container, initializeContainer } from "@/lib/plugin-loader";
 import { normalizeEmail } from "@/lib/sign-in/email";
 import { LoginFlow } from "./_components/login-flow";
 
+// A same-site path only: "//host", backslashes and whitespace (browsers drop tabs) could leave the site
+const SAFE_NEXT = /^\/(?![/\\])[^\s\\]*$/;
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -14,7 +17,10 @@ export default async function LoginPage({
   initializeContainer();
   const emailLogin = container.get("mailer").isConfigured();
   // Links in mail may name the address, e.g. /login?email=a@b.c
-  const initialEmail = normalizeEmail((await searchParams).email) ?? "";
+  const params = await searchParams;
+  const initialEmail = normalizeEmail(params.email) ?? "";
+  // Where to go after sign-in, e.g. /login?next=/info/topup
+  const next = typeof params.next === "string" && SAFE_NEXT.test(params.next) ? params.next : "/";
 
   return (
     <div className="h-[100dvh] overflow-y-auto bg-gradient-to-br from-th-page via-th-panel to-th-page">
@@ -24,7 +30,7 @@ export default async function LoginPage({
             <BrandLogo />
           </div>
 
-          <LoginFlow emailLogin={emailLogin} initialEmail={initialEmail} />
+          <LoginFlow emailLogin={emailLogin} initialEmail={initialEmail} next={next} />
         </div>
 
         <div className="w-full max-w-4xl">
