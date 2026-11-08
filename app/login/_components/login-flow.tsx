@@ -15,8 +15,16 @@ type Step = "email" | "code" | "password" | "reset-email" | "reset-code" | "requ
 
 const RESEND_SECONDS = 45;
 
-/** Without mail delivery only the password form is offered */
-export function LoginFlow({ emailLogin, initialEmail = "" }: { emailLogin: boolean; initialEmail?: string }) {
+/** Without mail delivery only the password form is offered; `next` is a checked same-site path */
+export function LoginFlow({
+  emailLogin,
+  initialEmail = "",
+  next = "/",
+}: {
+  emailLogin: boolean;
+  initialEmail?: string;
+  next?: string;
+}) {
   const [step, setStep] = useState<Step>(emailLogin ? "email" : "password");
   const [email, setEmail] = useState(initialEmail);
   const [noAccountHint, setNoAccountHint] = useState(false);
@@ -45,7 +53,7 @@ export function LoginFlow({ emailLogin, initialEmail = "" }: { emailLogin: boole
 
   function enter(res: { ok: boolean }) {
     // Full load, so client caches built for a guest are dropped
-    if (res.ok) window.location.assign("/");
+    if (res.ok) window.location.assign(next);
   }
 
   const common = { busy: api.busy, error: api.error, secondsLeft: countdown.left, email };

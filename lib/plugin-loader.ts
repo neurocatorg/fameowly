@@ -69,5 +69,19 @@ function loadExtensionPlugins(): void {
   }
 }
 
+/** Runs every plugin's `onServerStart`; a failing plugin does not stop the others */
+export async function startPluginBackgroundTasks(): Promise<void> {
+  initializeContainer();
+  if (process.env.ENABLE_PLUGINS === "false" || !Array.isArray(extensionPlugins)) return;
+
+  for (const plugin of extensionPlugins) {
+    try {
+      await plugin.onServerStart?.();
+    } catch (err) {
+      console.error(`[plugins] ${plugin.id} onServerStart failed:`, err);
+    }
+  }
+}
+
 /** Re-export container for convenience */
 export { container } from "./container";

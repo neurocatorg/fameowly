@@ -195,4 +195,11 @@ export interface Plugin {
    * any other id is served at `/info/<id>`.
    */
   publicPages?: Record<string, PluginPublicPage>;
+
+  /**
+   * Called once per server process after the container is initialised
+   * (`instrumentation.ts`, Node.js runtime only): starts background tasks.
+   * Several processes may run it at once, so tasks must take their own locks.
+   */
+  onServerStart?: () => void | Promise<void>;
 }

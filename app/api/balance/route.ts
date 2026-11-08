@@ -20,3 +20,7 @@ export async function PUT(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return delegate(req, "POST");
 }
+
+export async function PATCH(req: NextRequest) {
+  return delegate(req, "PATCH");
+}
