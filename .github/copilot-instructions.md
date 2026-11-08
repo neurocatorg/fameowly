@@ -175,8 +175,10 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `reasoningOptionsProvider`, `documentStore`, `mailer`, `registrationPolicy`, `accessGate`.
   `userLifecycle.onUserCreated?` fires for accounts added by an admin or created by sign-up.
   `accessGate.check(userId)` (OSS: never blocks) keeps a signed-in user out of the app: `/` renders the
-  `access-gate` slot instead, `/api/chat` and `/api/image` answer 403. Premium `registration` uses it to
-  require a confirmed email from non-admins while mail is configured.
+  `access-gate` slot instead, `/api/chat` and `/api/image` answer 403. Premium `registration` uses it for
+  «Завершите настройку аккаунта»: non-admins accept the current offer edition (the offer's «Редакция от» line;
+  a new edition asks again; optional news-by-email flag) and confirm an email while mail is configured.
+  Consents live in `user_consents` + append-only `consent_log` (delegated `/api/account-setup`).
   `lib/plugin-loader.ts` registers OSS defaults first; plugins override. Last register wins.
 - **Adding New Plugins** (no core files to edit):
   1. Create folder `extensions/plugins/{plugin}/`, implement `Plugin`, register in `extensions/index.ts`.
@@ -188,7 +190,7 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   for slots no plugin fills. With `ENABLE_PLUGINS=false` the map is empty,
   so plugin components are never bundled. The login page hosts `login-legal` and
   `login-request-access`; guests read `/api/plugins/capabilities` with slot ids only.
-  `/profile` hosts `profile-balance` and `profile-payments`; empty chat and image screens host
+  `/profile` hosts `profile-balance`, `profile-preferences` and `profile-payments`; empty chat and image screens host
   `chat-empty-notice`; the app hosts `payment-required` and `onboarding` (state behind the
   delegated `/api/onboarding`); `/` hosts `access-gate`; the sidebar footer hosts `sidebar-menu`
   (entries styled with `components/sidebar/footer-classes.ts`).
