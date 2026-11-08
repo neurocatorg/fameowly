@@ -11,6 +11,8 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "danger" | "default";
+  /** Optional action between cancel and confirm */
+  secondary?: { label: string; onClick: () => void };
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,6 +24,7 @@ export function ConfirmModal({
   confirmLabel = "Удалить",
   cancelLabel = "Отмена",
   variant = "danger",
+  secondary,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
@@ -63,13 +66,21 @@ export function ConfirmModal({
             <p className="mt-1 text-xs text-th-fg-m leading-relaxed">{message}</p>
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex flex-wrap justify-end gap-2 mt-4">
           <button
             onClick={onCancel}
             className="rounded-lg bg-th-subtle px-4 py-2.5 text-xs font-medium text-th-fg-s transition hover:bg-th-muted sm:py-2"
           >
             {cancelLabel}
           </button>
+          {secondary && (
+            <button
+              onClick={secondary.onClick}
+              className="rounded-lg border border-th-border-s px-4 py-2.5 text-xs font-medium text-th-fg transition hover:bg-th-subtle sm:py-2"
+            >
+              {secondary.label}
+            </button>
+          )}
           <button
             onClick={onConfirm}
             className={`rounded-lg px-4 py-2.5 text-xs font-medium text-white transition sm:py-2 ${

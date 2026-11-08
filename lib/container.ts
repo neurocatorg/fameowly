@@ -19,6 +19,7 @@ import type {
   DocumentStore,
   Mailer,
   RegistrationPolicy,
+  AccessGate,
 } from "./contracts";
 
 export interface ServiceMap {
@@ -34,6 +35,7 @@ export interface ServiceMap {
   documentStore: DocumentStore;
   mailer: Mailer;
   registrationPolicy: RegistrationPolicy;
+  accessGate: AccessGate;
 }
 
 /** Registry surface exposed to plugins during register() */

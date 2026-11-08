@@ -9,6 +9,8 @@ import type {
   CostSnapshot,
   ModelAccessPolicy,
   SpendingGuard,
+  AccessBlock,
+  AccessGate,
   UserLifecycle,
 } from "../contracts";
 import type { ModelsConfig } from "../models";
@@ -38,6 +40,13 @@ export class OpenModelAccessPolicy implements ModelAccessPolicy {
 /** No balances in OSS, so nothing is ever refused */
 export class OpenSpendingGuard implements SpendingGuard {
   async check(): Promise<string | null> {
+    return null;
+  }
+}
+
+/** Every signed-in user may use the app */
+export class OpenAccessGate implements AccessGate {
+  async check(): Promise<AccessBlock | null> {
     return null;
   }
 }
