@@ -37,6 +37,11 @@ export async function POST(req: NextRequest) {
   if (!userId) {
     return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
   }
+  initializeContainer();
+  const accessBlock = await container.get("accessGate").check(userId);
+  if (accessBlock) {
+    return NextResponse.json({ error: accessBlock.message }, { status: 403 });
+  }
 
   try {
     const { prompt, model, referenceFiles, aspectRatio, resolution } = await req.json();

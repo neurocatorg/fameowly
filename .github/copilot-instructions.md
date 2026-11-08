@@ -170,10 +170,13 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   for guests (otherwise `/` redirects to /login), other ids at `/info/<id>`. The core wraps them
   in `components/public/public-shell.tsx` («Войти», or «Открыть FaMeowly» for a signed-in visitor);
   `footerLabel` adds a link to the public footer. Pages read the session themselves when needed.
-- **DI Container** (`lib/container.ts`): twelve strategy slots — `providerResolver`, `modelFactory`,
+- **DI Container** (`lib/container.ts`): thirteen strategy slots — `providerResolver`, `modelFactory`,
   `usageTracker`, `pricingPolicy`, `modelAccessPolicy`, `spendingGuard`, `userLifecycle`, `webToolsProvider`,
-  `reasoningOptionsProvider`, `documentStore`, `mailer`, `registrationPolicy`.
+  `reasoningOptionsProvider`, `documentStore`, `mailer`, `registrationPolicy`, `accessGate`.
   `userLifecycle.onUserCreated?` fires for accounts added by an admin or created by sign-up.
+  `accessGate.check(userId)` (OSS: never blocks) keeps a signed-in user out of the app: `/` renders the
+  `access-gate` slot instead, `/api/chat` and `/api/image` answer 403. Premium `registration` uses it to
+  require a confirmed email from non-admins while mail is configured.
   `lib/plugin-loader.ts` registers OSS defaults first; plugins override. Last register wins.
 - **Adding New Plugins** (no core files to edit):
   1. Create folder `extensions/plugins/{plugin}/`, implement `Plugin`, register in `extensions/index.ts`.
@@ -187,7 +190,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `login-request-access`; guests read `/api/plugins/capabilities` with slot ids only.
   `/profile` hosts `profile-balance` and `profile-payments`; empty chat and image screens host
   `chat-empty-notice`; the app hosts `payment-required` and `onboarding` (state behind the
-  delegated `/api/onboarding`).
+  delegated `/api/onboarding`); `/` hosts `access-gate`; the sidebar footer hosts `sidebar-menu`
+  (entries styled with `components/sidebar/footer-classes.ts`).
 - **Plugin Bridge**: `lib/plugins.ts` loads the registry from `@plugins` and exposes
   `adminTabs` / `uiSlots` / `apiRoutes`. When the submodule is absent, `lib/plugin-stub.ts`
   supplies an empty plugins array.

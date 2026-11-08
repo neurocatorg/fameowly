@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { Settings, LogOut, Github, BarChart2, UserRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PluginSlot } from "@/lib/plugin-ui";
 import { useUserInfo } from "@/hooks/use-user-info";
 import { usePluginCapabilities } from "@/hooks/use-plugin-capabilities";
+import { footerIconBtnCls, footerIconCls, footerRowCls } from "./footer-classes";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -21,14 +23,6 @@ interface SidebarFooterProps {
   compact?: boolean;
   className?: string;
 }
-
-// ─── Constants ─────────────────────────────────────────────────────────────
-
-const rowCls =
-  "flex w-full items-center gap-[5px] text-left text-sm text-th-fg transition hover:text-th-accent";
-const iconBtnCls =
-  "flex h-10 w-10 items-center justify-center rounded-[10px] text-th-fg-m transition hover:text-th-accent";
-const iconCls = "h-6 w-6 shrink-0 text-th-fg-m";
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
@@ -55,6 +49,35 @@ export function SidebarFooter({ compact, className }: SidebarFooterProps) {
     { key: "github", icon: Github, label: "GitHub", href: "https://github.com/lemix/fameowly" },
   ];
 
+  function renderItem({ key, icon: Icon, label, onClick, href }: FooterItem) {
+    const icon = <Icon className={footerIconCls} strokeWidth={1.5} />;
+    const common = {
+      "data-testid": `footer-${key}`,
+      className: compact ? footerIconBtnCls : footerRowCls,
+      ...(compact ? { title: label, "aria-label": label } : {}),
+    };
+    return href ? (
+      <a key={key} {...common} href={href} target="_blank" rel="noopener noreferrer">
+        {icon}
+        {!compact && label}
+      </a>
+    ) : (
+      <button key={key} {...common} onClick={onClick}>
+        {icon}
+        {!compact && label}
+      </button>
+    );
+  }
+
+  // Plugin links (e.g. pricing) go right after the profile
+  const entries = (
+    <>
+      {items.slice(0, 1).map(renderItem)}
+      <PluginSlot id="sidebar-menu" props={{ compact: Boolean(compact) }} />
+      {items.slice(1).map(renderItem)}
+    </>
+  );
+
   return (
     <div
       className={cn(
@@ -65,58 +88,7 @@ export function SidebarFooter({ compact, className }: SidebarFooterProps) {
       data-testid="sidebar-footer"
       data-compact={compact ? "true" : "false"}
     >
-      {compact ? (
-        <div className="-ml-2 flex items-center gap-1">
-          {items.map(({ key, icon: Icon, label, onClick, href }) =>
-            href ? (
-              <a
-                key={key}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={label}
-                aria-label={label}
-                data-testid={`footer-${key}`}
-                className={iconBtnCls}
-              >
-                <Icon className={iconCls} strokeWidth={1.5} />
-              </a>
-            ) : (
-              <button
-                key={key}
-                onClick={onClick}
-                title={label}
-                aria-label={label}
-                data-testid={`footer-${key}`}
-                className={iconBtnCls}
-              >
-                <Icon className={iconCls} strokeWidth={1.5} />
-              </button>
-            ),
-          )}
-        </div>
-      ) : (
-        items.map(({ key, icon: Icon, label, onClick, href }) =>
-          href ? (
-            <a
-              key={key}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid={`footer-${key}`}
-              className={rowCls}
-            >
-              <Icon className={iconCls} strokeWidth={1.5} />
-              {label}
-            </a>
-          ) : (
-            <button key={key} onClick={onClick} data-testid={`footer-${key}`} className={rowCls}>
-              <Icon className={iconCls} strokeWidth={1.5} />
-              {label}
-            </button>
-          ),
-        )
-      )}
+      {compact ? <div className="-ml-2 flex items-center gap-1">{entries}</div> : entries}
 
       <p className={cn("pl-1 text-sm leading-[17px] text-th-fg-f", compact ? "mt-2" : "mt-[14px]")}>
         © 2026 Fameowly

@@ -19,6 +19,7 @@ import {
   NoPricingPolicy,
   OpenModelAccessPolicy,
   OpenSpendingGuard,
+  OpenAccessGate,
   NoopUserLifecycle,
 } from "./strategies/open-policies";
 import { FileDocumentStore } from "./storage/file-document-store";
@@ -50,6 +51,7 @@ export function initializeContainer(): void {
   container.register("documentStore", new FileDocumentStore(dataPath("db")));
   container.register("mailer", new DefaultMailer());
   container.register("registrationPolicy", new ClosedRegistrationPolicy());
+  container.register("accessGate", new OpenAccessGate());
 
   // Extension plugins override via container.register()
   loadExtensionPlugins();

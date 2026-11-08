@@ -73,6 +73,8 @@ export async function POST(req: Request) {
     // Model access is a plugin concern; the OSS policy grants everything.
     const userRole = req.headers.get("x-user-role") || "user";
     const userId = req.headers.get("x-user-id") || "unknown";
+    const accessBlock = await container.get("accessGate").check(userId);
+    if (accessBlock) return jsonError(accessBlock.message, 403);
     if (
       (await isArchivedModel(modelId)) ||
       !(await container.get("modelAccessPolicy").canUse(userId, modelId))

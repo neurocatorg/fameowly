@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const result = await confirmEmailChange(user, email, code, clientIp(request.headers));
   if ("user" in result) return NextResponse.json({ email: result.user.email });
   if (result.error === "taken") {
-    return NextResponse.json({ error: "Этот адрес привязан к другому аккаунту" }, { status: 409 });
+    return NextResponse.json({ error: "Этот адрес привязан к другому аккаунту. Укажите другой" }, { status: 409 });
   }
   return signInError(result.error === "limited" ? "limited" : "code");
 }
