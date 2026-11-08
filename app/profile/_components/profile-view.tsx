@@ -40,6 +40,7 @@ export function ProfileView() {
               <NameSection name={user.name} onSaved={reload} />
               <EmailSection email={user.email} verified={Boolean(user.emailVerified)} onSaved={reload} />
               <PasswordSection hasPassword={Boolean(user.hasPassword)} email={user.email} onSaved={reload} />
+              <PluginSlot id="profile-preferences" />
               <PluginSlot id="profile-payments" />
             </>
           )}

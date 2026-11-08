@@ -31,9 +31,9 @@ test("a legacy account without email binds one and then signs in by code", async
   const section = page.getByTestId("profile-email");
   await expect(section).toContainText("Не привязан");
   await section.getByRole("button", { name: "Привязать email" }).click();
-  await section.getByLabel("Адрес, на который придёт код").fill(email);
+  await section.getByLabel("Ваш email").fill(email);
   let since = mailMark();
-  await section.getByRole("button", { name: "Прислать код" }).click();
+  await section.getByRole("button", { name: "Получить код" }).click();
   await section.getByLabel("Код из письма").fill(await readMailedCode(email, since));
   await section.getByRole("button", { name: "Подтвердить" }).click();
   await expect(section).toContainText(`${email} · подтверждён`);

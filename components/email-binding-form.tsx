@@ -79,12 +79,13 @@ export function EmailBindingForm({ initialEmail = "", onBound, onCancel }: Email
     >
       <div>
         <label htmlFor={inputId} className={labelCls}>
-          Адрес, на который придёт код
+          Ваш email
         </label>
         <input
           id={inputId}
           type="email"
           autoComplete="email"
+          placeholder="name@example.com"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           className={inputCls}
@@ -96,7 +97,7 @@ export function EmailBindingForm({ initialEmail = "", onBound, onCancel }: Email
       <FormError message={error} />
       <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={busy || countdown.left > 0} className={`${btnPrimary} disabled:opacity-50`}>
-          {countdown.left > 0 ? `Прислать код через ${countdown.left} с` : "Прислать код"}
+          {countdown.left > 0 ? `Получить код через ${countdown.left} с` : "Получить код"}
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} className={btnGhost}>
