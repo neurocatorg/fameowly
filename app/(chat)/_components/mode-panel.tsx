@@ -1,25 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOBILE_MEDIA_QUERY } from "@/lib/constants/breakpoints";
+import { REASONING_LEVEL_TEXT } from "@/lib/reasoning-levels";
+import type { ReasoningLevel } from "@/lib/types";
 import { Toast } from "@/components/toast";
+import { OptionPicker } from "@/components/option-picker/option-picker";
+import { ISLAND_SHADOW } from "@/components/option-picker/chip-styles";
+import type { PickerOption } from "@/components/option-picker/option-list";
+import { WebSearchToggle } from "./web-search-toggle";
 
-// ─── Temperature presets ─────────────────────────────────────────────
+// ─── Answer style (temperature presets) ──────────────────────────────
 
-interface TempPreset {
-  id: string;
-  label: string;
-  icon: string;
-  value: number;
+type StyleId = "precise" | "balanced" | "creative";
+
+const STYLE_PRESETS: (PickerOption<StyleId> & { value: number })[] = [
+  { id: "precise", label: "Точно", icon: "🎯", value: 0.2,
+    hint: "Строго по делу, без фантазий — для фактов, кода и расчётов" },
+  { id: "balanced", label: "Взвешенно", icon: "⚖️", value: 0.6,
+    hint: "Точность и живой язык в меру — подходит для большинства вопросов" },
+  { id: "creative", label: "Творчески", icon: "🎨", value: 1.0,
+    hint: "Больше фантазии и неожиданных идей — для текстов, историй и мозгового штурма" },
+];
+
+function closestStyle(temperature: number) {
+  return STYLE_PRESETS.reduce((closest, p) =>
+    Math.abs(p.value - temperature) < Math.abs(closest.value - temperature) ? p : closest,
+  );
 }
 
-const TEMP_PRESETS: TempPreset[] = [
-  { id: "precise",  label: "Точно",     icon: "🎯", value: 0.2 },
-  { id: "balanced", label: "Баланс",    icon: "⚖️", value: 0.6 },
-  { id: "creative", label: "Творчески", icon: "🎨", value: 1.0 },
-];
+const REASONING_ICONS: Record<ReasoningLevel, string> = { off: "⚡", low: "💭", medium: "🧠", high: "🎓" };
 
 // ─── Props ───────────────────────────────────────────────────────────
 
@@ -27,9 +38,9 @@ interface ModePanelProps {
   isVisible: boolean;
   isKeyboardOpen: boolean;
   supportsTemperature: boolean;
-  supportsReasoning: boolean;
-  reasoningEnabled: boolean;
-  onReasoningToggle: () => void;
+  reasoningLevels: readonly ReasoningLevel[];
+  reasoningLevel: ReasoningLevel | undefined;
+  onReasoningLevelChange: (level: ReasoningLevel) => void;
   temperature: number;
   onTemperatureChange: (value: number) => void;
   supportsWebSearch: boolean;
@@ -39,21 +50,14 @@ interface ModePanelProps {
 
 // ─── Component ───────────────────────────────────────────────────────
 
-/**
- * Floating mode-control panel (reasoning + temperature presets).
- * Positioned absolutely above the chat input island.
- *
- * - Desktop: icon + text label
- * - Mobile: icon only (text hidden via md:inline)
- * - Ultra-compact: smaller sizing when mobile keyboard is open
- */
+/** Floating answer options above the chat input: thinking depth, style, web search */
 export function ModePanel({
   isVisible,
   isKeyboardOpen,
   supportsTemperature,
-  supportsReasoning,
-  reasoningEnabled,
-  onReasoningToggle,
+  reasoningLevels,
+  reasoningLevel,
+  onReasoningLevelChange,
   temperature,
   onTemperatureChange,
   supportsWebSearch,
@@ -62,30 +66,11 @@ export function ModePanel({
 }: ModePanelProps) {
   const [toast, setToast] = useState<string | null>(null);
 
-  const showControls = supportsTemperature || supportsReasoning || supportsWebSearch;
-  if (!showControls) return null;
+  const showReasoning = reasoningLevels.length > 1 && reasoningLevel !== undefined;
+  if (!showReasoning && !supportsTemperature && !supportsWebSearch) return null;
 
-  const activePresetId = TEMP_PRESETS.reduce(
-    (closest, p) =>
-      Math.abs(p.value - temperature) < Math.abs(closest.value - temperature)
-        ? p
-        : closest,
-    TEMP_PRESETS[0],
-  ).id;
-
-  const handleTempChange = (preset: TempPreset) => {
-    onTemperatureChange(preset.value);
-    if (window.matchMedia(MOBILE_MEDIA_QUERY).matches) {
-      setToast(`Режим: ${preset.label}`);
-    }
-  };
-
-  const handleReasoningToggle = () => {
-    onReasoningToggle();
-    if (window.matchMedia(MOBILE_MEDIA_QUERY).matches) {
-      setToast(reasoningEnabled ? "Режим «Думать» выключен" : "Режим «Думать» включён");
-    }
-  };
+  const reasoningOptions = reasoningLevels.map((id) => ({ id, icon: REASONING_ICONS[id], ...REASONING_LEVEL_TEXT[id] }));
+  const style = closestStyle(temperature);
 
   const handleWebSearchToggle = () => {
     onWebSearchToggle();
@@ -93,6 +78,8 @@ export function ModePanel({
       setToast(webSearchEnabled ? "Поиск в интернете выключен" : "Поиск в интернете включён");
     }
   };
+
+  const separator = <div className={cn("w-px shrink-0 bg-th-option-sep", isKeyboardOpen ? "h-5" : "h-[25px]")} />;
 
   return (
     <>
@@ -110,82 +97,42 @@ export function ModePanel({
       >
         <div
           className={cn(
-            "flex items-center rounded-full bg-th-panel/90 shadow-lg backdrop-blur-sm ring-1 ring-th-ring/50",
-            isKeyboardOpen ? "gap-1 px-1.5 py-0.5" : "gap-1.5 px-2 py-1",
+            "flex items-center gap-1 rounded-[40px] bg-th-panel md:gap-[10px] dark:ring-1 dark:ring-th-border",
+            ISLAND_SHADOW,
+            isKeyboardOpen ? "p-1" : "p-1.5",
           )}
         >
-          {/* Reasoning toggle */}
-          {supportsReasoning && (
-            <button
-              type="button"
-              onClick={handleReasoningToggle}
-              className={cn(
-                "flex items-center rounded-full font-medium transition",
-                isKeyboardOpen ? "h-7 gap-1 px-2 text-xs" : "h-9 gap-1.5 px-3 text-sm",
-                reasoningEnabled
-                  ? "bg-th-purple-bg text-th-purple-fg ring-1 ring-th-purple-muted/40"
-                  : "text-th-fg-m hover:text-th-fg-s hover:bg-th-subtle/60",
-              )}
-              data-testid="reasoning-pill"
-            >
-              <span className={isKeyboardOpen ? "text-xs" : "text-sm"}>🧠</span>
-              <span className="hidden md:inline">Думать</span>
-            </button>
+          {showReasoning && (
+            <OptionPicker
+              title="Сколько думать перед ответом"
+              options={reasoningOptions}
+              value={reasoningLevel}
+              onChange={onReasoningLevelChange}
+              tone={reasoningLevel === "off" ? "none" : "purple"}
+              testId="reasoning-picker"
+            />
           )}
 
-          {/* Separator */}
-          {supportsReasoning && supportsTemperature && (
-            <div className={cn("w-px bg-th-subtle/60", isKeyboardOpen ? "h-4" : "h-6")} />
-          )}
+          {showReasoning && supportsTemperature && separator}
 
-          {/* Temperature chips */}
           {supportsTemperature && (
-            <div className="flex items-center gap-1" data-testid="temperature-chips">
-              {TEMP_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => handleTempChange(preset)}
-                  className={cn(
-                    "flex items-center rounded-full font-medium transition",
-                    isKeyboardOpen ? "h-7 gap-1 px-2 text-xs" : "h-9 gap-1.5 px-3 text-sm",
-                    activePresetId === preset.id
-                      ? "bg-th-accent-bg text-th-accent-fg ring-1 ring-th-accent-ring"
-                      : "text-th-fg-f hover:text-th-fg-m hover:bg-th-subtle/60",
-                  )}
-                  data-testid={`temp-chip-${preset.id}`}
-                >
-                  <span className={isKeyboardOpen ? "text-xs" : "text-sm"}>{preset.icon}</span>
-                  <span className="hidden md:inline">{preset.label}</span>
-                </button>
-              ))}
-            </div>
+            <OptionPicker
+              title="Стиль ответа"
+              options={STYLE_PRESETS}
+              value={style.id}
+              onChange={(id) => onTemperatureChange(STYLE_PRESETS.find((p) => p.id === id)!.value)}
+              tone="accent"
+              testId="style-picker"
+            />
           )}
 
-          {/* Separator */}
-          {supportsWebSearch && (supportsReasoning || supportsTemperature) && (
-            <div className={cn("w-px bg-th-subtle/60", isKeyboardOpen ? "h-4" : "h-6")} />
-          )}
+          {supportsWebSearch && (showReasoning || supportsTemperature) && separator}
 
-          {/* Web search toggle */}
           {supportsWebSearch && (
-            <button
-              type="button"
-              onClick={handleWebSearchToggle}
-              title={webSearchEnabled ? "Поиск в интернете включён" : "Поиск в интернете выключен"}
-              aria-pressed={webSearchEnabled}
-              className={cn(
-                "flex items-center rounded-full font-medium transition",
-                isKeyboardOpen ? "h-7 gap-1 px-2 text-xs" : "h-9 gap-1.5 px-3 text-sm",
-                webSearchEnabled
-                  ? "bg-th-accent-bg text-th-accent-fg ring-1 ring-th-accent-ring"
-                  : "text-th-fg-m hover:text-th-fg-s hover:bg-th-subtle/60",
-              )}
-              data-testid="web-search-pill"
-            >
-              <Globe className={isKeyboardOpen ? "h-3 w-3" : "h-3.5 w-3.5"} />
-              <span className="hidden md:inline">Поиск</span>
-            </button>
+            <WebSearchToggle
+              enabled={webSearchEnabled}
+              onToggle={handleWebSearchToggle}
+            />
           )}
         </div>
       </div>

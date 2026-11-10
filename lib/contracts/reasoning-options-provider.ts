@@ -3,16 +3,21 @@
  *
  * Splits two independent concerns:
  *  - visibility  — always ask the provider to return its reasoning, where it can;
- *  - control     — the «Думать» toggle, which only some providers can honour.
+ *  - control     — the «Сколько думать» picker, which only some providers can honour.
  */
 
-import type { BaseProvider } from "../types";
+import type { BaseProvider, ReasoningLevel } from "../types";
 
 export interface ReasoningOptionsRequest {
   baseProvider: BaseProvider;
   modelId: string;
-  /** The «Думать» toggle. Undefined when the model exposes no toggle. */
+  /**
+   * @deprecated read `reasoningLevel`. Kept in sync with it: `false` for "off",
+   * `true` for any other level, undefined when the model exposes no control.
+   */
   reasoningEnabled?: boolean;
+  /** The picked level, already one the model offers. Undefined when it exposes no control. */
+  reasoningLevel?: ReasoningLevel;
 }
 
 export interface ReasoningOptionsProvider {

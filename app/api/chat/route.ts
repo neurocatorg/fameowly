@@ -6,6 +6,7 @@ import { createGroundingTracker, countStepSearchQueries } from "@/lib/chat/strea
 import { withHeartbeat } from "@/lib/chat/sse-heartbeat";
 import { extractPublicUrls } from "@/lib/web-tools/url-detection";
 import { isArchivedModel, readModelsConfig } from "@/lib/models.server";
+import { requestedReasoningLevel } from "@/lib/reasoning-levels";
 import type { ApiMessage } from "@/lib/chat/build-core-messages";
 import type { ResolvedCredentials } from "@/lib/types";
 import type { LanguageModel, ToolSet } from "ai";
@@ -25,7 +26,7 @@ const GENERATION_TIMEOUT_MS = 600_000;
 const CLOUD_TIMEOUT = { totalMs: GENERATION_TIMEOUT_MS, stepMs: 240_000, chunkMs: 90_000 };
 
 const TIMEOUT_NOTICE =
-  "[Превышен лимит времени. Повторите запрос; если не поможет — упростите его или отключите «Думать».]";
+  "[Превышен лимит времени. Повторите запрос; если не поможет — упростите его или выберите «Сразу» или «Быстро».]";
 
 const DEFAULT_SYSTEM_PROMPT = `Ты — полезный AI-ассистент в семейном хабе. Отвечай на русском языке, если пользователь пишет на русском. Будь дружелюбным и полезным.`;
 
@@ -50,7 +51,6 @@ export async function POST(req: Request) {
       provider,
       systemPrompt,
       temperature: rawTemperature,
-      reasoningEnabled: rawReasoningEnabled,
       webSearchEnabled: rawWebSearchEnabled,
       chatId,
       assistantMessageId,
@@ -60,7 +60,6 @@ export async function POST(req: Request) {
       provider: string;
       systemPrompt?: string;
       temperature?: number;
-      reasoningEnabled?: boolean;
       webSearchEnabled?: boolean;
       chatId?: string;
       assistantMessageId?: string;
@@ -106,10 +105,11 @@ export async function POST(req: Request) {
     const userText = lastUserMessage?.content ?? "";
     const urls = extractPublicUrls(userText);
     const chatUrls = [...new Set(messages.filter((m) => m.role === "user").flatMap((m) => extractPublicUrls(m.content)))];
+    const modelConfig = (await readModelsConfig()).chatModels.find((m) => m.id === modelId);
     const webRequest = {
       baseProvider: credentials.baseProvider,
       modelId,
-      model: (await readModelsConfig()).chatModels.find((m) => m.id === modelId),
+      model: modelConfig,
       webSearchEnabled: rawWebSearchEnabled !== false,
       urlContextRequested: urls.length > 0,
       chatUrls,
@@ -126,10 +126,12 @@ export async function POST(req: Request) {
     });
     const prompt = applyWebContext(system, coreMessages, webContext);
 
+    const reasoningLevel = requestedReasoningLevel(body, modelConfig);
     const providerOptions = container.get("reasoningOptionsProvider").resolve({
       baseProvider: credentials.baseProvider,
       modelId,
-      reasoningEnabled: rawReasoningEnabled,
+      reasoningLevel,
+      reasoningEnabled: reasoningLevel && reasoningLevel !== "off",
     }) as Parameters<typeof streamText>[0]["providerOptions"];
 
     const trackGrounding = createGroundingTracker(webContext?.grounding);

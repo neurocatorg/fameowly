@@ -2,6 +2,9 @@
 
 export type ModelTier = "basic" | "advanced" | "ultra";
 
+/** How long a model thinks before answering, from not at all to the deepest */
+export type ReasoningLevel = "off" | "low" | "medium" | "high";
+
 export interface ModelOption {
   id: string;
   name: string;
@@ -22,8 +25,10 @@ export interface ModelOption {
   pricePerImage?: number;
   /** @deprecated migrated into `inputPricePer1M` / `outputPricePer1M` on read */
   pricePer1MTokens?: number;
-  /** Defaults to `false` */
+  /** Defaults to `false`. Without `reasoningLevels` it offers the levels "off" and "high" */
   supportsReasoning?: boolean;
+  /** Levels the user may pick; overrides `supportsReasoning`. Fewer than two = no picker */
+  reasoningLevels?: ReasoningLevel[];
   /** Defaults to `false` */
   supportsTemperature?: boolean;
   /** Provider-native live web search (Grounding with Google Search). Defaults to `false` */

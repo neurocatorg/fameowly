@@ -51,6 +51,8 @@
       "tier": "advanced",
       "clientPrice": 3,
       "supportsTemperature": true,
+      "supportsReasoning": true,
+      "reasoningLevels": ["off", "low", "medium", "high"],
       "description": "Мощная аналитика сложных текстов"
     },
     {

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { MessageData, ChatAttachment, ChatStatus, ModelOption } from "@/lib/types";
+import type { MessageData, ChatAttachment, ChatStatus, ModelOption, ReasoningLevel } from "@/lib/types";
 import { parseSSEStream } from "@/lib/sse-parser";
 import { buildApiMessages, processStreamEvent } from "./streaming-helpers";
 import type { StreamAccumulator } from "./streaming-helpers";
 
 interface LocalOptions {
   temperature?: number;
-  reasoningEnabled?: boolean;
+  reasoningLevel?: ReasoningLevel;
   webSearchEnabled?: boolean;
 }
 

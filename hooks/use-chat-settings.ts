@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { ChatSettings } from "@/lib/types";
+import type { ChatSettings, ReasoningLevel } from "@/lib/types";
 
 const STORAGE_KEY = "chat-settings";
 const DEFAULT_SETTINGS: ChatSettings = {
   temperature: 0.6,
-  reasoningEnabled: true,
+  reasoningLevel: "medium",
   webSearchEnabled: true,
 };
 
+/** Settings saved before levels existed carry an on/off flag instead */
+type StoredSettings = Partial<ChatSettings> & { reasoningEnabled?: boolean };
+
 /** Read all per-chat settings from localStorage */
-function readAllSettings(): Record<string, Partial<ChatSettings>> {
+function readAllSettings(): Record<string, StoredSettings> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -21,17 +24,18 @@ function readAllSettings(): Record<string, Partial<ChatSettings>> {
 }
 
 /** Write all per-chat settings to localStorage */
-function writeAllSettings(all: Record<string, Partial<ChatSettings>>) {
+function writeAllSettings(all: Record<string, StoredSettings>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch { /* silent — localStorage might be full */ }
 }
 
 /** Fill in defaults for settings saved before a field existed */
-function withDefaults(saved: Partial<ChatSettings>): ChatSettings {
+function withDefaults(saved: StoredSettings): ChatSettings {
+  const legacyLevel = saved.reasoningEnabled === false ? "off" : undefined;
   return {
     temperature: saved.temperature ?? DEFAULT_SETTINGS.temperature,
-    reasoningEnabled: saved.reasoningEnabled ?? DEFAULT_SETTINGS.reasoningEnabled,
+    reasoningLevel: saved.reasoningLevel ?? legacyLevel ?? DEFAULT_SETTINGS.reasoningLevel,
     webSearchEnabled: saved.webSearchEnabled ?? DEFAULT_SETTINGS.webSearchEnabled,
   };
 }
@@ -86,8 +90,8 @@ export function useChatSettings(activeChatId: string | null) {
 
   const setTemperature = useCallback(
     (value: number) => update({ temperature: value }), [update]);
-  const setReasoningEnabled = useCallback(
-    (value: boolean) => update({ reasoningEnabled: value }), [update]);
+  const setReasoningLevel = useCallback(
+    (value: ReasoningLevel) => update({ reasoningLevel: value }), [update]);
   const setWebSearchEnabled = useCallback(
     (value: boolean) => update({ webSearchEnabled: value }), [update]);
 
@@ -96,8 +100,8 @@ export function useChatSettings(activeChatId: string | null) {
   return {
     temperature: settings.temperature,
     setTemperature,
-    reasoningEnabled: settings.reasoningEnabled,
-    setReasoningEnabled,
+    reasoningLevel: settings.reasoningLevel,
+    setReasoningLevel,
     webSearchEnabled: settings.webSearchEnabled,
     setWebSearchEnabled,
     resetToDefaults,

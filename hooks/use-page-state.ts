@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import type { ChatAttachment, Mode, ImageHistoryItemClient } from "@/lib/types";
 import { SYSTEM_PROMPT_PRESETS } from "@/lib/constants/system-prompts";
 import { getDefaultModel } from "@/lib/models";
+import { closestReasoningLevel, reasoningLevelsOf } from "@/lib/reasoning-levels";
 import { usePersistentChat } from "./use-persistent-chat";
 import { useFileUpload } from "./use-file-upload";
 import { useImageGeneration } from "./use-image-generation";
@@ -37,7 +38,7 @@ export function usePageState() {
   // Per-chat settings (Task 4: persisted in localStorage per chat)
   const {
     temperature, setTemperature,
-    reasoningEnabled, setReasoningEnabled,
+    reasoningLevel: wantedReasoningLevel, setReasoningLevel,
     webSearchEnabled, setWebSearchEnabled,
     resetToDefaults,
   } = useChatSettings(chat.activeChatId);
@@ -59,8 +60,16 @@ export function usePageState() {
 
   // Model capability flags — admin-controlled in models.json, no provider hardcoding
   const supportsTemperature = selectedModel.supportsTemperature ?? false;
-  const supportsReasoning = selectedModel.supportsReasoning ?? false;
   const supportsWebSearch = selectedModel.supportsWebSearch ?? false;
+  const reasoningLevels = useMemo(() => reasoningLevelsOf(selectedModel), [selectedModel]);
+  const reasoningLevel = closestReasoningLevel(wantedReasoningLevel, reasoningLevels);
+
+  // Always explicit: a model without web-search support must never attach the tool
+  const requestOptions = useMemo(() => ({
+    temperature: supportsTemperature ? temperature : undefined,
+    reasoningLevel,
+    webSearchEnabled: supportsWebSearch && webSearchEnabled,
+  }), [supportsTemperature, temperature, reasoningLevel, supportsWebSearch, webSearchEnabled]);
 
   const imageGen = useImageGeneration({
     selectedImageModel,
@@ -120,17 +129,10 @@ export function usePageState() {
       .map((pa) => pa.uploaded!);
     const sp = chat.messages.length === 0 ? currentSystemPrompt : undefined;
 
-    // Always explicit: a model without web-search support must never attach the tool
-    const localOptions = {
-      temperature: supportsTemperature ? temperature : undefined,
-      reasoningEnabled: supportsReasoning ? reasoningEnabled : undefined,
-      webSearchEnabled: supportsWebSearch && webSearchEnabled,
-    };
-
     payment.rememberDraft(input, fileUpload.pendingAttachments);
-    chat.sendMessage(input, selectedModel, attachments.length ? attachments : undefined, sp, localOptions);
+    chat.sendMessage(input, selectedModel, attachments.length ? attachments : undefined, sp, requestOptions);
     setInput(""); fileUpload.setPendingAttachments([]);
-  }, [input, isLoading, modelUnavailable, fileUpload, chat, payment, currentSystemPrompt, supportsTemperature, supportsReasoning, supportsWebSearch, temperature, reasoningEnabled, webSearchEnabled, selectedModel]);
+  }, [input, isLoading, modelUnavailable, fileUpload, chat, payment, currentSystemPrompt, requestOptions, selectedModel]);
 
   const handleNewChat = useCallback(() => {
     chat.clearChat(); setSelectedPresetId("default"); setCustomSystemPrompt("");
@@ -166,11 +168,6 @@ export function usePageState() {
     imageGen.setSelectedImageItem(null); imageGen.setImageUrl(null); imageGen.setImageError("");
   }, [imageGen]);
 
-  // Task 3: Reasoning toggle is decoupled from temperature — no temperature change
-  const handleReasoningToggle = useCallback(() => {
-    setReasoningEnabled(!reasoningEnabled);
-  }, [reasoningEnabled, setReasoningEnabled]);
-
   const handleWebSearchToggle = useCallback(() => {
     setWebSearchEnabled(!webSearchEnabled);
   }, [webSearchEnabled, setWebSearchEnabled]);
@@ -182,9 +179,9 @@ export function usePageState() {
     input, setInput,
     selectedPresetId, setSelectedPresetId, customSystemPrompt, setCustomSystemPrompt,
     showSystemPromptPanel, setShowSystemPromptPanel, currentSystemPrompt,
-    reasoningEnabled, temperature, setTemperature, handleReasoningToggle,
+    reasoningLevels, reasoningLevel, setReasoningLevel, temperature, setTemperature,
     webSearchEnabled, handleWebSearchToggle,
-    supportsTemperature, supportsReasoning, supportsWebSearch,
+    supportsTemperature, supportsWebSearch, requestOptions,
     ...fileUpload, ...imageGen, imageHistory,
     paymentRequired: payment.reason, dismissPaymentRequired: payment.dismiss,
     handleChatSubmit, handleNewChat, handleSelectChat, handleSelectImageItem, handleNewImageGeneration,

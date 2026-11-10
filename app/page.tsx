@@ -14,7 +14,13 @@ export default async function HomePage() {
   if (user) {
     initializeContainer();
     const block = await container.get("accessGate").check(user.id);
-    if (!block) return <ChatApp />;
+    if (!block) {
+      const optionIcons = {
+        chips: process.env.CHAT_OPTION_ICONS !== "false",
+        list: process.env.CHAT_OPTION_LIST_ICONS === "true",
+      };
+      return <ChatApp optionIcons={optionIcons} />;
+    }
     return (
       <PluginSlot
         id="access-gate"
