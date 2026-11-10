@@ -115,7 +115,6 @@ function ChatPage() {
               webSearchEnabled={s.webSearchEnabled}
               onWebSearchToggle={s.handleWebSearchToggle}
               modelUnavailable={s.modelUnavailable}
-              isKeyboardOpen={isKeyboardOpen}
               chatId={s.activeChatId}
             />
           )}

@@ -163,7 +163,17 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   re-focuses it inside the closing tap (iOS only reopens the keyboard from a user gesture).
   Hints live in the option list; on/off chips get an ⓘ `Tooltip` (hover on desktop, tap on touch).
   Emoji on chips unless `CHAT_OPTION_ICONS=false`, in the lists only with `CHAT_OPTION_LIST_ICONS=true`
-  (`page.tsx` → `OptionIconsContext`).
+  (`page.tsx` → `OptionIconsContext`). `OptionPanel` is the floating pill that holds the chips in both
+  modes: chat (thinking, style, search) and image (format with `AspectRatioIcon`, quality 1K/2K/4K).
+- **Prompt island**: `components/prompt-island/` is the one input for chat and image modes
+  (`chat-composer.tsx` / `image-composer.tsx` wire it). One row `[+] text [estimate] [→]` while the text
+  fits; otherwise the text takes the full width and the controls drop to a row below. `use-prompt-layout.ts`
+  decides from a hidden one-line copy of the text measured against the compact width, so the layout
+  never flips back and forth; it returns to one row only when cleared or when the text fits again.
+  Same textarea element in both layouts (CSS grid areas), so focus and the phone keyboard survive.
+  Text height is capped at `min(200, 30% of the visual viewport)`; below `PROMPT_COMPACT_HEIGHT`
+  (keyboard up) the island and chips drop spare paddings. Enter always adds a line; sending is the
+  button only. `estimate` is an empty slot for now (cost estimate comes later).
 - **Plugin System**: optional features are implemented as plugins in the `extensions/` submodule.
   Behaviour is overridden through the DI container; core routes resolve strategies
   via `container.get(...)`. Admin UI loads plugin tabs from `/api/plugins/capabilities`.

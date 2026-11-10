@@ -5,7 +5,7 @@ interface AspectRatioIconProps {
   active: boolean;
 }
 
-/** SVG shape icon for aspect ratio chips */
+/** SVG frame shape for the image format chip */
 export function AspectRatioIcon({ type, active }: AspectRatioIconProps) {
   const fill = active ? "rgba(96, 165, 250, 0.3)" : "var(--th-fg-f, rgba(100, 116, 139, 0.2))";
   const stroke = active ? "#60a5fa" : "var(--th-fg-f, #64748b)";
@@ -27,7 +27,7 @@ export function AspectRatioIcon({ type, active }: AspectRatioIconProps) {
   const y = (svgH - h) / 2;
 
   return (
-    <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="shrink-0">
+    <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="h-[18px] w-[18px] shrink-0 md:h-5 md:w-5">
       <rect
         x={x}
         y={y}

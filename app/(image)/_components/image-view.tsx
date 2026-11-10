@@ -6,7 +6,7 @@ import { ConfirmModal } from "@/components/confirm-modal";
 import { ImagePreviewModal } from "@/components/image-preview-modal";
 import { ImageResult } from "./image-result";
 import { ImageEmptyState } from "./image-empty-state";
-import { ImageInput } from "./image-input";
+import { ImageComposer } from "./image-composer";
 
 interface ImageViewProps {
   selectedItem: ImageHistoryItemClient | null;
@@ -71,11 +71,12 @@ export function ImageView({
 
       {/* Input — only in generation mode */}
       {!selectedItem && (
-        <ImageInput
+        <ImageComposer
           prompt={imagePrompt}
           onPromptChange={onPromptChange}
           onSubmit={onGenerate}
           isLoading={imageLoading}
+          error={imageError}
           refAttachments={refAttachments}
           onAddRefFiles={onAddRefFiles}
           onRemoveRefAttachment={onRemoveRefAttachment}
@@ -83,7 +84,6 @@ export function ImageView({
           onAspectRatioChange={onAspectRatioChange}
           resolution={resolution}
           onResolutionChange={onResolutionChange}
-          error={imageError}
         />
       )}
 

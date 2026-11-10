@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { MOBILE_MEDIA_QUERY } from "@/lib/constants/breakpoints";
 import { REASONING_LEVEL_TEXT } from "@/lib/reasoning-levels";
 import type { ReasoningLevel } from "@/lib/types";
 import { Toast } from "@/components/toast";
 import { OptionPicker } from "@/components/option-picker/option-picker";
-import { ISLAND_SHADOW } from "@/components/option-picker/chip-styles";
+import { OptionPanel } from "@/components/option-picker/option-panel";
 import type { PickerOption } from "@/components/option-picker/option-list";
 import { WebSearchToggle } from "./web-search-toggle";
 
@@ -36,7 +35,8 @@ const REASONING_ICONS: Record<ReasoningLevel, string> = { off: "⚡", low: "💭
 
 interface ModePanelProps {
   isVisible: boolean;
-  isKeyboardOpen: boolean;
+  /** Tighter paddings on a short viewport (phone keyboard up) */
+  compact: boolean;
   supportsTemperature: boolean;
   reasoningLevels: readonly ReasoningLevel[];
   reasoningLevel: ReasoningLevel | undefined;
@@ -53,7 +53,7 @@ interface ModePanelProps {
 /** Floating answer options above the chat input: thinking depth, style, web search */
 export function ModePanel({
   isVisible,
-  isKeyboardOpen,
+  compact,
   supportsTemperature,
   reasoningLevels,
   reasoningLevel,
@@ -79,63 +79,38 @@ export function ModePanel({
     }
   };
 
-  const separator = <div className={cn("w-px shrink-0 bg-th-option-sep", isKeyboardOpen ? "h-5" : "h-[25px]")} />;
-
   return (
     <>
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
 
-      <div
-        className={cn(
-          "absolute bottom-full left-0 right-0 z-10 flex justify-center transition-all duration-300",
-          isVisible
-            ? "translate-y-0 opacity-100"
-            : "pointer-events-none translate-y-4 opacity-0",
+      <OptionPanel isVisible={isVisible} compact={compact} testId="mode-panel">
+        {showReasoning && (
+          <OptionPicker
+            title="Сколько думать перед ответом"
+            options={reasoningOptions}
+            value={reasoningLevel}
+            onChange={onReasoningLevelChange}
+            tone={reasoningLevel === "off" ? "none" : "purple"}
+            testId="reasoning-picker"
+          />
         )}
-        style={{ paddingBottom: isKeyboardOpen ? 4 : 8 }}
-        onMouseDown={(e) => e.preventDefault()}
-      >
-        <div
-          className={cn(
-            "flex items-center gap-1 rounded-[40px] bg-th-panel md:gap-[10px] dark:ring-1 dark:ring-th-border",
-            ISLAND_SHADOW,
-            isKeyboardOpen ? "p-1" : "p-1.5",
-          )}
-        >
-          {showReasoning && (
-            <OptionPicker
-              title="Сколько думать перед ответом"
-              options={reasoningOptions}
-              value={reasoningLevel}
-              onChange={onReasoningLevelChange}
-              tone={reasoningLevel === "off" ? "none" : "purple"}
-              testId="reasoning-picker"
-            />
-          )}
-
-          {showReasoning && supportsTemperature && separator}
-
-          {supportsTemperature && (
-            <OptionPicker
-              title="Стиль ответа"
-              options={STYLE_PRESETS}
-              value={style.id}
-              onChange={(id) => onTemperatureChange(STYLE_PRESETS.find((p) => p.id === id)!.value)}
-              tone="accent"
-              testId="style-picker"
-            />
-          )}
-
-          {supportsWebSearch && (showReasoning || supportsTemperature) && separator}
-
-          {supportsWebSearch && (
-            <WebSearchToggle
-              enabled={webSearchEnabled}
-              onToggle={handleWebSearchToggle}
-            />
-          )}
-        </div>
-      </div>
+        {supportsTemperature && (
+          <OptionPicker
+            title="Стиль ответа"
+            options={STYLE_PRESETS}
+            value={style.id}
+            onChange={(id) => onTemperatureChange(STYLE_PRESETS.find((p) => p.id === id)!.value)}
+            tone="accent"
+            testId="style-picker"
+          />
+        )}
+        {supportsWebSearch && (
+          <WebSearchToggle
+            enabled={webSearchEnabled}
+            onToggle={handleWebSearchToggle}
+          />
+        )}
+      </OptionPanel>
     </>
   );
 }
