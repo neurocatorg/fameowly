@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import type { ImageHistoryItemClient, PendingAttachment } from "@/lib/types";
+import type { ImageOptions } from "@/hooks/use-image-options";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { ImagePreviewModal } from "@/components/image-preview-modal";
 import { ImageResult } from "./image-result";
@@ -22,10 +23,7 @@ interface ImageViewProps {
   onAddRefFiles: (files: File[]) => void;
   onRemoveRefAttachment: (idx: number) => void;
   // Settings
-  aspectRatio: string;
-  onAspectRatioChange: (ar: string) => void;
-  resolution: string;
-  onResolutionChange: (res: string) => void;
+  imageOptions: ImageOptions;
   // Modals
   previewImage: string | null;
   onPreviewChange: (src: string | null) => void;
@@ -37,8 +35,7 @@ interface ImageViewProps {
 export function ImageView({
   selectedItem, imageLoading, imageError,
   imagePrompt, onPromptChange, onGenerate, onDelete, onNewGeneration,
-  refAttachments, onAddRefFiles, onRemoveRefAttachment,
-  aspectRatio, onAspectRatioChange, resolution, onResolutionChange,
+  refAttachments, onAddRefFiles, onRemoveRefAttachment, imageOptions,
   previewImage, onPreviewChange, confirmDeleteId, onConfirmDeleteChange,
 }: ImageViewProps) {
   return (
@@ -80,10 +77,7 @@ export function ImageView({
           refAttachments={refAttachments}
           onAddRefFiles={onAddRefFiles}
           onRemoveRefAttachment={onRemoveRefAttachment}
-          aspectRatio={aspectRatio}
-          onAspectRatioChange={onAspectRatioChange}
-          resolution={resolution}
-          onResolutionChange={onResolutionChange}
+          options={imageOptions}
         />
       )}
 

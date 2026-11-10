@@ -129,3 +129,51 @@ test.describe("Image mode options", () => {
     await expect(page.getByTestId("image-input-island")).toHaveAttribute("data-layout", "expanded");
   });
 });
+
+test.describe("Image thinking and web search", () => {
+  test.use({ viewport: MOBILE });
+
+  test("the picked options reach /api/image and sources show under the image", async ({ page }) => {
+    await loginAsAdmin(page);
+    // Model flags come from the admin; force them so the test does not depend on the catalogue
+    await page.route("**/api/models", async (route) => {
+      const response = await route.fetch();
+      const json = await response.json();
+      json.imageModels = json.imageModels.map((m: Record<string, unknown>) => ({
+        ...m, reasoningLevels: ["off", "high"], supportsReasoning: true, supportsWebSearch: true,
+      }));
+      await route.fulfill({ response, json });
+    });
+    let sent: Record<string, unknown> | undefined;
+    await page.route("**/api/image", async (route) => {
+      sent = route.request().postDataJSON();
+      await route.fulfill({
+        json: {
+          imageUrl: "/icon.png",
+          historyItem: {
+            id: "img-e2e", prompt: sent!.prompt, imageUrl: "/icon.png", modelId: sent!.model,
+            modelName: "E2E", createdAt: new Date().toISOString(), reasoningLevel: "high", webSearch: true,
+            grounding: {
+              queries: ["погода в Москве"],
+              sources: [{ uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/x", title: "pogoda.ru" }],
+            },
+          },
+        },
+      });
+    });
+    await page.goto("/?mode=image");
+
+    await expect(page.getByTestId("reasoning-picker")).toContainText("Сразу");
+    await page.getByTestId("reasoning-picker").click();
+    await page.getByTestId("reasoning-picker-option-high").click();
+    await page.getByTestId("web-search-pill").click();
+    await expect(page.getByTestId("web-search-pill")).toHaveAttribute("aria-pressed", "true");
+
+    await page.getByTestId("prompt-input").fill("Прогноз погоды в Москве инфографикой");
+    // The Next.js dev badge covers the send button on a 375px screen
+    await page.getByTestId("prompt-submit").dispatchEvent("click");
+
+    await expect(page.getByTestId("grounding-panel")).toContainText("pogoda.ru");
+    expect(sent).toMatchObject({ reasoningLevel: "high", webSearch: true });
+  });
+});

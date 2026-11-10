@@ -8,6 +8,8 @@ import { initializeContainer, container } from "@/lib/plugin-loader";
 import { proxyFetch } from "@/lib/proxy-fetch";
 import { storeGeneratedImage } from "@/lib/generated-image";
 import { ASPECT_RATIOS, RESOLUTIONS } from "@/lib/constants/image-options";
+import { imageRequestExtras } from "@/lib/image-generation-options";
+import { extractGrounding } from "@/lib/web-tools/grounding";
 import { resolveFileUrl } from "@/lib/file-storage";
 import { getVertexAccessToken } from "@/lib/providers/vertex-auth";
 import {
@@ -44,7 +46,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { prompt, model, referenceFiles, aspectRatio, resolution } = await req.json();
+    const body = await req.json();
+    const { prompt, model, referenceFiles, aspectRatio, resolution } = body;
 
     if (!prompt) {
       return NextResponse.json(
@@ -72,6 +75,7 @@ export async function POST(req: NextRequest) {
     // Determine target resolution (longest side in px)
     const targetLongestSide =
       resolution === "4K" ? 4096 : resolution === "2K" ? 2048 : 0; // 0 = keep as-is
+    const extras = imageRequestExtras(body, modelInfo);
 
     // Build reference file list for history
     const refFilesForHistory = (referenceFiles as Array<{ url: string; name: string; mimeType: string }> | undefined)
@@ -88,6 +92,8 @@ export async function POST(req: NextRequest) {
       referenceFiles: refFilesForHistory,
       aspectRatio: aspectRatio || "1:1",
       resolution: resolution || "1K",
+      ...(extras.reasoningLevel ? { reasoningLevel: extras.reasoningLevel } : {}),
+      ...(extras.webSearch ? { webSearch: true } : {}),
     };
 
     // Resolve credentials via virtual providers / .env fallback
@@ -182,10 +188,12 @@ export async function POST(req: NextRequest) {
           // Without it gemini-3.1-flash-image ends vague prompts with finishReason NO_IMAGE (4/4 vs 0/4, 2026-11-04)
           systemInstruction: { parts: [{ text: IMAGE_SYSTEM_INSTRUCTION }] },
           contents: [{ role: "user", parts }],
+          ...(extras.tools ? { tools: extras.tools } : {}),
           generationConfig: {
             // With TEXT allowed, gemini-3.1-flash-image may answer vague prompts with text only
             responseModalities: ["IMAGE"],
             imageConfig,
+            ...(extras.thinkingConfig ? { thinkingConfig: extras.thinkingConfig } : {}),
           },
         }),
       });
@@ -245,7 +253,8 @@ export async function POST(req: NextRequest) {
         historyItem.imageUrl = imageUrl;
         console.log(
           `[image] user=${userId} model=${modelId} size=${historyItem.resolution} ar=${historyItem.aspectRatio}` +
-            ` refs=${referenceFiles?.length ?? 0} upstream=${upstreamMs}ms resize=${stored.resizeMs}ms` +
+            ` refs=${referenceFiles?.length ?? 0} think=${extras.reasoningLevel ?? "-"} search=${extras.webSearch}` +
+            ` upstream=${upstreamMs}ms resize=${stored.resizeMs}ms` +
             ` out=${stored.width}x${stored.height}${stored.upscaled ? "(upscaled)" : ""}` +
             ` bytes=${stored.bytes} total=${Date.now() - startedAt}ms`
         );
@@ -254,11 +263,16 @@ export async function POST(req: NextRequest) {
           (p: Record<string, unknown>) => typeof p.text === "string"
         );
         const description = textPart?.text || undefined;
+        const grounding = extractGrounding({ vertex: { groundingMetadata: data?.candidates?.[0]?.groundingMetadata } });
+        if (grounding) {
+          // Search Suggestions are shown with this response only: their redirect URLs expire
+          historyItem.grounding = { queries: grounding.queries, sources: grounding.sources };
+        }
 
         await addImageHistoryItem(userId, historyItem);
         container.get("usageTracker").onImageFinish(userId, modelId)
           .catch((err) => console.error("[usage-tracker] image finish error:", err));
-        return NextResponse.json({ imageUrl, description, historyItem });
+        return NextResponse.json({ imageUrl, description, historyItem: { ...historyItem, grounding } });
       }
 
       const textPart = resParts.find(

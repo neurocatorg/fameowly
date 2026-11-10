@@ -6,6 +6,8 @@ import type { Collection } from "./contracts/document-store";
 import { getDocumentStore } from "./storage/db";
 import { externalizeAttachments } from "./file-storage";
 import { deleteImageVariants } from "./image-variants";
+import type { ReasoningLevel } from "./models";
+import type { MessageGrounding } from "./web-tools/grounding";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -20,6 +22,12 @@ export interface ImageHistoryItem {
   referenceFiles?: Array<{ url: string; name: string; mimeType: string }>;
   aspectRatio?: string;
   resolution?: string;
+  /** Thinking depth sent to the model; absent when the model has no picker */
+  reasoningLevel?: ReasoningLevel;
+  /** Google Search was allowed for this generation */
+  webSearch?: boolean;
+  /** What the model searched for and the pages it used */
+  grounding?: MessageGrounding;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

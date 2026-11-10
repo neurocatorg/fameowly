@@ -132,10 +132,7 @@ function ChatPage() {
               refAttachments={s.imageRefAttachments}
               onAddRefFiles={s.addImageRefFiles}
               onRemoveRefAttachment={s.removeImageRefAttachment}
-              aspectRatio={s.imageAspectRatio}
-              onAspectRatioChange={s.setImageAspectRatio}
-              resolution={s.imageResolution}
-              onResolutionChange={s.setImageResolution}
+              imageOptions={s.imageOptions}
               previewImage={s.previewImage}
               onPreviewChange={s.setPreviewImage}
               confirmDeleteId={s.confirmDeleteImageId}

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { ModelOption, PendingAttachment, ImageHistoryItemClient } from "@/lib/types";
+import { useImageOptions } from "./use-image-options";
 
 interface UseImageGenerationParams {
   selectedImageModel: ModelOption;
@@ -19,8 +20,8 @@ export function useImageGeneration(params: UseImageGenerationParams) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState("");
-  const [imageAspectRatio, setImageAspectRatio] = useState("4:3");
-  const [imageResolution, setImageResolution] = useState("1K");
+  const imageOptions = useImageOptions(selectedImageModel);
+  const optionsBody = imageOptions.requestBody;
   const [selectedImageItem, setSelectedImageItem] = useState<ImageHistoryItemClient | null>(null);
   const [confirmDeleteImageId, setConfirmDeleteImageId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -52,8 +53,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             prompt: imagePrompt,
             model: selectedImageModel.id,
             referenceFiles: refFiles.length ? refFiles : undefined,
-            aspectRatio: imageAspectRatio,
-            resolution: imageResolution,
+            ...optionsBody,
           }),
         });
         const data = await res.json();
@@ -79,7 +79,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         await loadImageHistory();
       }
     },
-    [imagePrompt, imageRefAttachments, selectedImageModel, imageAspectRatio, imageResolution, setImageRefAttachments, loadImageHistory, onPaymentRequired]
+    [imagePrompt, imageRefAttachments, selectedImageModel, optionsBody, setImageRefAttachments, loadImageHistory, onPaymentRequired]
   );
 
   const deleteImageHistoryItem = useCallback(
@@ -110,10 +110,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     imageLoading,
     imageError,
     setImageError,
-    imageAspectRatio,
-    setImageAspectRatio,
-    imageResolution,
-    setImageResolution,
+    imageOptions,
     selectedImageItem,
     setSelectedImageItem,
     confirmDeleteImageId,

@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { MOBILE_MEDIA_QUERY } from "@/lib/constants/breakpoints";
-import { REASONING_LEVEL_TEXT } from "@/lib/reasoning-levels";
+import { REASONING_ICONS, REASONING_LEVEL_TEXT } from "@/lib/reasoning-levels";
 import type { ReasoningLevel } from "@/lib/types";
 import { Toast } from "@/components/toast";
 import { OptionPicker } from "@/components/option-picker/option-picker";
 import { OptionPanel } from "@/components/option-picker/option-panel";
 import type { PickerOption } from "@/components/option-picker/option-list";
-import { WebSearchToggle } from "./web-search-toggle";
+import { WebSearchToggle } from "@/components/option-picker/web-search-toggle";
 
 // ─── Answer style (temperature presets) ──────────────────────────────
 
@@ -29,7 +29,6 @@ function closestStyle(temperature: number) {
   );
 }
 
-const REASONING_ICONS: Record<ReasoningLevel, string> = { off: "⚡", low: "💭", medium: "🧠", high: "\u{1F300}" };
 
 // ─── Props ───────────────────────────────────────────────────────────
 

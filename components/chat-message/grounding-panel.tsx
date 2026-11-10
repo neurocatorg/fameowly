@@ -34,6 +34,12 @@ function hostLabel(uri: string): string {
   }
 }
 
+/** Vertex hides sources behind its own redirect; their title is the site name then */
+function sourceLabel(source: { uri: string; title: string }): string {
+  const host = hostLabel(source.uri);
+  return host === "vertexaisearch.cloud.google.com" && source.title ? source.title : host;
+}
+
 /**
  * Build Search Suggestions chips.
  * Live responses carry Google's own chips; persisted messages fall back to the
@@ -102,7 +108,7 @@ export function GroundingPanel({ grounding }: GroundingPanelProps) {
               title={source.title}
               className="max-w-[200px] truncate rounded-full bg-th-subtle/60 px-2.5 py-1 text-[11px] text-th-fg-m transition hover:bg-th-subtle hover:text-th-fg"
             >
-              {idx + 1}. {hostLabel(source.uri)}
+              {idx + 1}. {sourceLabel(source)}
             </a>
           ))}
         </div>

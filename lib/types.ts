@@ -61,6 +61,9 @@ export interface ImageHistoryItemClient {
   referenceFiles?: Array<{ url: string; name: string; mimeType: string }>;
   aspectRatio?: string;
   resolution?: string;
+  reasoningLevel?: ReasoningLevel;
+  webSearch?: boolean;
+  grounding?: MessageGrounding;
 }
 
 // ─── Virtual Provider types ──────────────────────────────────────────
