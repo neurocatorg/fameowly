@@ -2,6 +2,7 @@
 
 import type { PendingAttachment } from "@/lib/types";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
+import type { ImageOptions } from "@/hooks/use-image-options";
 import { PromptIsland } from "@/components/prompt-island/prompt-island";
 import { AttachmentStrip } from "@/components/prompt-island/attachment-strip";
 import { ImageOptionsPanel } from "./image-options-panel";
@@ -15,28 +16,18 @@ interface ImageComposerProps {
   refAttachments: PendingAttachment[];
   onAddRefFiles: (files: File[]) => void;
   onRemoveRefAttachment: (idx: number) => void;
-  aspectRatio: string;
-  onAspectRatioChange: (id: string) => void;
-  resolution: string;
-  onResolutionChange: (id: string) => void;
+  options: ImageOptions;
 }
 
-/** Image format and quality chips, reference files and the prompt island */
+/** Image option chips, reference files and the prompt island */
 export function ImageComposer({
   prompt, onPromptChange, onSubmit, isLoading, error,
-  refAttachments, onAddRefFiles, onRemoveRefAttachment,
-  aspectRatio, onAspectRatioChange, resolution, onResolutionChange,
+  refAttachments, onAddRefFiles, onRemoveRefAttachment, options,
 }: ImageComposerProps) {
   const { isCompact } = useVisualViewport();
   return (
     <div className="relative shrink-0">
-      <ImageOptionsPanel
-        compact={isCompact}
-        aspectRatio={aspectRatio}
-        onAspectRatioChange={onAspectRatioChange}
-        resolution={resolution}
-        onResolutionChange={onResolutionChange}
-      />
+      <ImageOptionsPanel compact={isCompact} options={options} />
       <PromptIsland
         value={prompt}
         onChange={onPromptChange}

@@ -11,6 +11,14 @@ export const REASONING_LEVEL_TEXT: Record<ReasoningLevel, { label: string; hint:
   high: { label: "Глубоко", hint: "Думает долго — для сложных задач и расчётов. Медленнее и дороже" },
 };
 
+/** Emoji of the «Сколько думать» chips in chat and image modes */
+export const REASONING_ICONS: Record<ReasoningLevel, string> = {
+  off: "\u26A1",
+  low: "\u{1F4AD}",
+  medium: "\u{1F9E0}",
+  high: "\u{1F300}",
+};
+
 /** What the on/off toggle meant before levels existed */
 const LEGACY_LEVELS: readonly ReasoningLevel[] = ["off", "high"];
 

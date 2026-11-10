@@ -1,6 +1,8 @@
 import { Download, Sparkles, Trash2 } from "lucide-react";
 import type { ImageHistoryItemClient } from "@/lib/types";
 import { imageVariantUrl } from "@/lib/image-variant-url";
+import { REASONING_LEVEL_TEXT } from "@/lib/reasoning-levels";
+import { GroundingPanel } from "@/components/chat-message/grounding-panel";
 
 interface ImageResultProps {
   item: ImageHistoryItemClient;
@@ -28,6 +30,12 @@ export function ImageResult({ item, onPreview, onDelete, onNewGeneration }: Imag
           <p className="text-sm text-th-fg-s whitespace-pre-wrap leading-relaxed">
             {item.prompt}
           </p>
+
+          {item.grounding && (
+            <div className="mt-2.5">
+              <GroundingPanel grounding={item.grounding} />
+            </div>
+          )}
 
           {/* Reference files */}
           {item.referenceFiles && item.referenceFiles.length > 0 && (
@@ -80,6 +88,12 @@ export function ImageResult({ item, onPreview, onDelete, onNewGeneration }: Imag
               {item.resolution && (
                 <>
                   <span>{item.resolution}</span>
+                  <span>•</span>
+                </>
+              )}
+              {item.reasoningLevel && (
+                <>
+                  <span>{REASONING_LEVEL_TEXT[item.reasoningLevel].label}</span>
                   <span>•</span>
                 </>
               )}

@@ -116,6 +116,18 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   and stored next to the original. Only «Скачать» fetches the original. Stored file names are
   UUIDs or content hashes, so `/api/files` responds `immutable` + `ETag`.
   `image-store` moves legacy inline `data:` reference images to disk on read and on write.
+  Thinking and search for images reuse the model flags `reasoningLevels` and `supportsWebSearch`
+  (admin form shows both for image models). `lib/image-generation-options.ts` maps the picked level
+  to `generationConfig.thinkingConfig.thinkingLevel` ("off" = `MINIMAL`), only when the model offers
+  2+ levels, and adds `tools: [{ googleSearch: {} }]`. Measured 2026-11-10 on Vertex:
+  gemini-3.1-flash-image `HIGH` adds ~1.5k thought tokens and ~5 s; gemini-3-pro-image ignores the
+  level (~310 thought tokens always). Search is the model's call — it rarely searches unless the
+  prompt asks for fresh facts — and gives it page text only. Image search (`searchTypes.imageSearch`,
+  flash only) is not wired: unverified (quota 429) and its Search Suggestions are mandatory.
+  Grounding goes to `ImageHistoryItem.grounding` without `suggestions` (they expire); the live
+  response carries them, and `ImageResult` shows `GroundingPanel`. Image defaults: «Сразу», search off.
+  It bypasses `webToolsProvider`: the route calls Gemini REST directly. Usage/billing does not see
+  thinking tokens or search queries yet (`usageTracker.onImageFinish(userId, modelId)`).
 - **Web tools**: two mechanisms behind one `webToolsProvider` slot. `resolve()` returns
   `tools` for `streamText()` — provider-native for Google/Vertex (they share the same tool
   factories: `@ai-sdk/google-vertex` re-exports them from `@ai-sdk/google`, so one OSS strategy
@@ -164,7 +176,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   Hints live in the option list; on/off chips get an ⓘ `Tooltip` (hover on desktop, tap on touch).
   Emoji on chips unless `CHAT_OPTION_ICONS=false`, in the lists only with `CHAT_OPTION_LIST_ICONS=true`
   (`page.tsx` → `OptionIconsContext`). `OptionPanel` is the floating pill that holds the chips in both
-  modes: chat (thinking, style, search) and image (format with `AspectRatioIcon`, quality 1K/2K/4K).
+  modes: chat (thinking, style, search) and image (format with `AspectRatioIcon`, quality 1K/2K/4K,
+  thinking and search when the image model allows them).
 - **Prompt island**: `components/prompt-island/` is the one input for chat and image modes
   (`chat-composer.tsx` / `image-composer.tsx` wire it). One row `[+] text [estimate] [→]` while the text
   fits; otherwise the text takes the full width and the controls drop to a row below. `use-prompt-layout.ts`
