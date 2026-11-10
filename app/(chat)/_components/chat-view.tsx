@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { ChevronUp } from "lucide-react";
 import { SYSTEM_PROMPT_PRESETS } from "@/lib/constants/system-prompts";
-import type { MessageData, ChatStatus, PendingAttachment } from "@/lib/types";
+import type { MessageData, ChatStatus, PendingAttachment, ReasoningLevel } from "@/lib/types";
 import { ChatMessage } from "@/components/chat-message/chat-message";
 import { ChatEmptyState } from "./chat-empty-state";
 import { SystemPromptDisplay } from "./system-prompt-display";
@@ -41,9 +41,9 @@ interface ChatViewProps {
   showSystemPromptPanel: boolean;
   onShowPanelChange: (show: boolean) => void;
   supportsTemperature: boolean;
-  supportsReasoning: boolean;
-  reasoningEnabled: boolean;
-  onReasoningToggle: () => void;
+  reasoningLevels: readonly ReasoningLevel[];
+  reasoningLevel: ReasoningLevel | undefined;
+  onReasoningLevelChange: (level: ReasoningLevel) => void;
   temperature: number;
   onTemperatureChange: (value: number) => void;
   supportsWebSearch: boolean;
@@ -61,8 +61,8 @@ export function ChatView({
   pendingAttachments, onAddFiles, onRemoveAttachment, onRetryAttachment,
   selectedPresetId, onSelectPreset, customSystemPrompt, onCustomPromptChange,
   showSystemPromptPanel, onShowPanelChange,
-  supportsTemperature, supportsReasoning,
-  reasoningEnabled, onReasoningToggle,
+  supportsTemperature,
+  reasoningLevels, reasoningLevel, onReasoningLevelChange,
   temperature, onTemperatureChange,
   supportsWebSearch, webSearchEnabled, onWebSearchToggle,
   modelUnavailable,
@@ -181,9 +181,9 @@ export function ChatView({
           isVisible={isPanelVisible}
           isKeyboardOpen={isKeyboardOpen}
           supportsTemperature={supportsTemperature}
-          supportsReasoning={supportsReasoning}
-          reasoningEnabled={reasoningEnabled}
-          onReasoningToggle={onReasoningToggle}
+          reasoningLevels={reasoningLevels}
+          reasoningLevel={reasoningLevel}
+          onReasoningLevelChange={onReasoningLevelChange}
           temperature={temperature}
           onTemperatureChange={onTemperatureChange}
           supportsWebSearch={supportsWebSearch}

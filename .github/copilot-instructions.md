@@ -153,8 +153,17 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   are never re-fetched.
 - **Reasoning**: two independent concerns. *Visibility* is always on where the provider
   supports it (`includeThoughts` for Google, tag extraction for local). *Control* is the
-  «Думать» toggle, shown only when `ModelOption.supportsReasoning` is set by the admin.
-  Both travel through the `reasoningOptionsProvider` slot as `providerOptions`.
+  «Сколько думать» picker (Сразу / Быстро / Вдумчиво / Глубоко = `ReasoningLevel` off/low/medium/high).
+  The admin picks the levels per model (`ModelOption.reasoningLevels`; without it
+  `supportsReasoning` means `[off, high]`); fewer than two levels = no picker. `/api/chat` clamps
+  the requested level to the model's list (`lib/reasoning-levels.ts`) and hands it to the
+  `reasoningOptionsProvider` slot as `reasoningLevel` (plus the deprecated `reasoningEnabled`).
+- **Answer options UI**: chips above the input are `components/option-picker/` — a popover above
+  the chip on desktop, a `components/ui/bottom-sheet.tsx` on mobile that blurs the textarea and
+  re-focuses it inside the closing tap (iOS only reopens the keyboard from a user gesture).
+  Hints live in the option list; on/off chips get an ⓘ `Tooltip` (hover on desktop, tap on touch).
+  Emoji on chips unless `CHAT_OPTION_ICONS=false`, in the lists only with `CHAT_OPTION_LIST_ICONS=true`
+  (`page.tsx` → `OptionIconsContext`).
 - **Plugin System**: optional features are implemented as plugins in the `extensions/` submodule.
   Behaviour is overridden through the DI container; core routes resolve strategies
   via `container.get(...)`. Admin UI loads plugin tabs from `/api/plugins/capabilities`.
@@ -267,6 +276,26 @@ default) are not breaking. Say so explicitly, so the distinction stays visible.
 
 Runtime data lives in `DATA_DIR` (default `./data`). OSS runs use a separate
 directory so they never corrupt premium data.
+
+## Local Demo Is Part of the Change
+
+A change with visible behaviour is **incomplete** until the user can look at it locally.
+Finish such a turn with a running dev server and say: URL, which account to sign in with,
+and what to click to see the change (mention the mobile viewport when it matters).
+
+- The local `./data` may still be in the legacy layout; then `npm run dev` answers 500 on `/`
+  ("Legacy data layout" / "Legacy premium data"). Never migrate `./data` without asking.
+  Run on a migrated copy instead:
+  ```bash
+  D=/tmp/fameowly-demo-data; rm -rf "$D" && cp -a data "$D"
+  DATA_DIR="$D" node scripts/migrate-legacy-layout.mjs
+  DATA_DIR="$D" node extensions/scripts/migrate-premium-files.mjs
+  DATA_DIR="$D" npm run dev
+  ```
+  The copy keeps the user's own accounts and passwords, models and providers.
+- One `next dev` per checkout (`.next/dev/lock`): stop the previous one first.
+- Verify the demo yourself before handing it over: the pages respond 200 and the server log
+  shows no errors.
 
 ## Additional Conventions
 

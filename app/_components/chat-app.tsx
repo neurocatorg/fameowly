@@ -13,14 +13,17 @@ import { PluginSlot } from "@/lib/plugin-ui";
 import { usePageState } from "@/hooks/use-page-state";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { useTheme } from "@/hooks/use-theme";
+import { OptionIconsContext, type OptionIcons } from "@/components/option-picker/option-icons";
 
 // ─── Main Component ──────────────────────────────────────────────────
 
 /** The signed-in app: chat, image and video modes */
-export function ChatApp() {
+export function ChatApp({ optionIcons }: { optionIcons: OptionIcons }) {
   return (
     <Suspense fallback={<div className="flex h-[100dvh] items-center justify-center bg-th-page text-th-fg"><Loader2 className="h-6 w-6 animate-spin text-th-accent" /></div>}>
-      <ChatPage />
+      <OptionIconsContext.Provider value={optionIcons}>
+        <ChatPage />
+      </OptionIconsContext.Provider>
     </Suspense>
   );
 }
@@ -89,11 +92,7 @@ function ChatPage() {
               onSubmit={s.handleChatSubmit}
               onStop={s.stop}
               onDeleteMessage={s.deleteMessage}
-              onRetry={() => s.retry(s.selectedModel, {
-                temperature: s.supportsTemperature ? s.temperature : undefined,
-                reasoningEnabled: s.supportsReasoning ? s.reasoningEnabled : undefined,
-                webSearchEnabled: s.supportsWebSearch && s.webSearchEnabled,
-              })}
+              onRetry={() => s.retry(s.selectedModel, s.requestOptions)}
               onDeleteLastExchange={s.deleteLastExchange}
               onUpdateSystemPrompt={s.updateSystemPrompt}
               pendingAttachments={s.pendingAttachments}
@@ -107,9 +106,9 @@ function ChatPage() {
               showSystemPromptPanel={s.showSystemPromptPanel}
               onShowPanelChange={s.setShowSystemPromptPanel}
               supportsTemperature={s.supportsTemperature}
-              supportsReasoning={s.supportsReasoning}
-              reasoningEnabled={s.reasoningEnabled}
-              onReasoningToggle={s.handleReasoningToggle}
+              reasoningLevels={s.reasoningLevels}
+              reasoningLevel={s.reasoningLevel}
+              onReasoningLevelChange={s.setReasoningLevel}
               temperature={s.temperature}
               onTemperatureChange={s.setTemperature}
               supportsWebSearch={s.supportsWebSearch}

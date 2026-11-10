@@ -123,6 +123,13 @@ The page (and its link on the login screen) exists only when `COMPANY_NAME`,
 `COMPANY_INN` and `COMPANY_OGRN` are all set; otherwise it returns 404.
 A 15-digit OGRN is labelled ОГРНИП.
 
+### Chat UI
+
+Emoji are shown on the answer-option chips above the input (thinking depth, answer style,
+web search); `CHAT_OPTION_ICONS=false` hides them. `CHAT_OPTION_LIST_ICONS=true` also shows
+them next to each choice in the lists (off by default). Both are read at request time, so a
+restart is enough.
+
 ### Models configuration
 
 The available models are stored in the data directory as the `models` document of the `settings` collection: `data/db/settings/models.json`, shaped `{ "id": "models", "chatModels": [...], "imageModels": [...] }`. A reference configuration with all supported fields is provided in `data/models.json.example`.
@@ -146,7 +153,7 @@ docker run -d --name searxng-dev -p 127.0.0.1:8888:8080 \
 
 Pages are fetched by the hub itself through an SSRF-hardened client (`lib/web-tools/safe-fetch.ts`): only `http`/`https`, every redirect re-validated, connections pinned to a resolved public IP, loopback and private ranges refused.
 
-`supportsReasoning` shows the «Думать» toggle, which lets the user ask the model to *stop* thinking in order to answer faster. Enable it only where the provider can actually honour it — Google (`thinkingConfig.thinkingBudget: 0`) does; a llama.cpp server started without `--jinja` silently ignores every such switch. Displaying the reasoning block itself does not depend on this flag: it is always on wherever the provider exposes reasoning.
+`reasoningLevels` sets which thinking depths the user may pick in the «Сколько думать перед ответом» picker: any of `"off"` (Сразу), `"low"` (Быстро), `"medium"` (Вдумчиво), `"high"` (Глубоко). The picker appears with two or more levels; a single level is applied silently. A model without `reasoningLevels` but with `supportsReasoning: true` offers `["off", "high"]`. List only what the provider honours: Google maps the levels to `thinkingConfig.thinkingLevel` and "off" to `thinkingBudget: 0` (gemini-3.1-pro stops thinking, gemini-3.8-flash does not); OpenRouter to `reasoning.effort` / `reasoning.enabled: false`; llama.cpp to `chat_template_kwargs` (`enable_thinking`, `reasoning_effort`), which a server started without `--jinja` silently ignores. Displaying the reasoning block itself does not depend on these settings: it is always on wherever the provider exposes reasoning.
 
 ## Local development
 

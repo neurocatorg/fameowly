@@ -7,14 +7,17 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-interface ModelBottomSheetProps {
+interface BottomSheetProps {
+  title: string;
   closing: boolean;
   onClose: () => void;
-  /** Shared with the parent, which measures and auto-scrolls the list. */
-  scrollRef: RefObject<HTMLDivElement | null>;
-  /** Tabs + banner — pinned above the scrollable list. */
-  top: ReactNode;
+  /** Pass one when the parent measures or auto-scrolls the list */
+  scrollRef?: RefObject<HTMLDivElement | null>;
+  /** Pinned above the scrollable content */
+  top?: ReactNode;
   children: ReactNode;
+  testId: string;
+  overlayTestId: string;
 }
 
 /** Swipe-down distance that dismisses the sheet */
@@ -23,12 +26,16 @@ const DRAG_CLOSE_PX = 80;
 // ─── Component ───────────────────────────────────────────────────────
 
 /**
- * Rendered into `document.body`: the app header carries `backdrop-filter`,
+ * Mobile sheet rendered into `document.body`: the app header carries `backdrop-filter`,
  * which makes it a containing block for `position: fixed` descendants, so an
  * in-place sheet would anchor to the 71px header instead of the viewport.
  */
-export function ModelBottomSheet({ closing, onClose, scrollRef, top, children }: ModelBottomSheetProps) {
+export function BottomSheet({
+  title, closing, onClose, scrollRef, top, children, testId, overlayTestId,
+}: BottomSheetProps) {
   const touchY = useRef(0);
+  const ownScrollRef = useRef<HTMLDivElement>(null);
+  const listRef = scrollRef ?? ownScrollRef;
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -43,7 +50,7 @@ export function ModelBottomSheet({ closing, onClose, scrollRef, top, children }:
       <div
         className={cn("fixed inset-0 z-[90] bg-black/50", closing ? "animate-fade-out" : "modal-overlay")}
         onClick={onClose}
-        data-testid="model-sheet-overlay"
+        data-testid={overlayTestId}
       />
       <div
         className={cn(
@@ -56,23 +63,25 @@ export function ModelBottomSheet({ closing, onClose, scrollRef, top, children }:
         }}
         onTouchMove={(e) => {
           // Prevent sheet drag when list is scrollable and not at top
-          if (scrollRef.current && scrollRef.current.scrollTop > 0) {
+          if (listRef.current && listRef.current.scrollTop > 0) {
             touchY.current = e.touches[0].clientY;
           }
         }}
         onTouchEnd={(e) => {
           const dy = e.changedTouches[0].clientY - touchY.current;
-          const atTop = !scrollRef.current || scrollRef.current.scrollTop <= 0;
+          const atTop = !listRef.current || listRef.current.scrollTop <= 0;
           if (atTop && dy > DRAG_CLOSE_PX) onClose();
         }}
-        data-testid="model-bottom-sheet"
+        role="dialog"
+        aria-label={title}
+        data-testid={testId}
       >
         <div className="shrink-0">
           <div className="flex justify-center pt-3 pb-1">
             <div className="h-1 w-10 rounded-full bg-th-muted" />
           </div>
           <div className="flex items-center justify-between px-4 pb-2">
-            <h3 className="text-sm font-semibold text-th-fg">Выбор модели</h3>
+            <h3 className="text-sm font-semibold text-th-fg">{title}</h3>
             <button
               onClick={onClose}
               aria-label="Закрыть"
@@ -82,8 +91,8 @@ export function ModelBottomSheet({ closing, onClose, scrollRef, top, children }:
             </button>
           </div>
         </div>
-        <div className="shrink-0">{top}</div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+        {top && <div className="shrink-0">{top}</div>}
+        <div ref={listRef} className="flex-1 overflow-y-auto min-h-0">
           {children}
         </div>
       </div>

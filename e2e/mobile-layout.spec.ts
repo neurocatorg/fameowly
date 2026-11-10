@@ -98,6 +98,31 @@ test.describe("Mobile layout 375x667", () => {
     await expect(page.getByTestId("app-header")).toBeVisible();
     await expect(page.getByTestId("reload-button")).toHaveCount(0);
   });
+
+  test("answer options fit the screen; a picker sheet hides the keyboard and gives the focus back", async ({ page }) => {
+    const chip = page.getByTestId("style-picker");
+    await expect(chip).toBeVisible();
+    for (const id of ["reasoning-picker", "style-picker", "web-search-pill", "web-search-hint"]) {
+      const el = page.getByTestId(id);
+      if (await el.count() === 0) continue;
+      const box = (await el.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(MOBILE.width);
+    }
+
+    const textarea = page.locator("textarea");
+    await textarea.focus();
+    await chip.click();
+    const sheet = page.getByTestId("style-picker-sheet");
+    await expect(sheet).toBeVisible();
+    expect(await sheet.evaluate((el) => el.parentElement?.tagName)).toBe("BODY");
+    await expect(textarea).not.toBeFocused();
+
+    await page.getByTestId("style-picker-option-creative").click();
+    await expect(sheet).toHaveCount(0);
+    await expect(chip).toContainText("Творчески");
+    await expect(textarea).toBeFocused();
+  });
 });
 
 test.describe("Sidebar vertical budget 375x667", () => {

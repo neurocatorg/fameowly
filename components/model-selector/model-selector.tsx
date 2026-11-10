@@ -9,7 +9,7 @@ import { TIER_LABELS, TIER_ORDER, TIER_ICONS } from "@/lib/models";
 import { ModelList, type ModelTab, type TierGroup } from "./model-list";
 import { ModelTabs } from "./model-tabs";
 import { ModelBanner } from "./model-banner";
-import { ModelBottomSheet } from "./model-bottom-sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 interface ModelSelectorProps {
   models: ModelOption[];
@@ -156,14 +156,17 @@ export function ModelSelector({ models, selected, onChange, modelUnavailable }: 
       )}
 
       {open && isMobile && (
-        <ModelBottomSheet
+        <BottomSheet
+          title="Выбор модели"
           closing={closing}
           onClose={close}
           scrollRef={scrollRef}
           top={<>{tabsUI}{bannerUI}</>}
+          testId="model-bottom-sheet"
+          overlayTestId="model-sheet-overlay"
         >
           {listContent}
-        </ModelBottomSheet>
+        </BottomSheet>
       )}
     </div>
   );

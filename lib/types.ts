@@ -3,7 +3,7 @@
 // Server types re-exported for convenience.
 // IMPORTANT: use `export type` to ensure tree-shaking —
 // these modules import `fs`/`path` which must NOT be bundled into client code.
-export type { ModelOption, ModelsConfig, ModelTier } from "./models";
+export type { ModelOption, ModelsConfig, ModelTier, ReasoningLevel } from "./models";
 export type {
   ChatListItem,
   ChatAttachment,
@@ -17,6 +17,7 @@ export type { ImageHistoryItem } from "./image-store";
 import type { ChatAttachment } from "./chat-store";
 import type { MessageGrounding } from "./web-tools/grounding";
 import type { UserRole } from "./auth";
+import type { ReasoningLevel } from "./models";
 
 export type { UserRole } from "./auth";
 
@@ -116,7 +117,8 @@ export interface ResolvedCredentials {
 /** Per-chat generation settings (persisted in localStorage) */
 export interface ChatSettings {
   temperature: number;
-  reasoningEnabled: boolean;
+  /** Wanted level; a model without it gets the closest one it offers */
+  reasoningLevel: ReasoningLevel;
   webSearchEnabled: boolean;
 }
 

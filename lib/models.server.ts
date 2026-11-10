@@ -5,6 +5,7 @@ import {
   type ModelOption,
   type ModelsConfig,
 } from "./models";
+import { reasoningLevelsOf } from "./reasoning-levels";
 
 const MODELS_ID = "models";
 
@@ -26,6 +27,7 @@ function normalizeModel(raw: ModelOption): ModelOption {
     ...raw,
     isLocal: raw.isLocal ?? (raw.provider === "local"),
     supportsReasoning: raw.supportsReasoning ?? false,
+    ...(raw.reasoningLevels && { reasoningLevels: reasoningLevelsOf(raw) }),
     supportsTemperature: raw.supportsTemperature ?? false,
     supportsWebSearch: raw.supportsWebSearch ?? false,
     supportsUrlContext: raw.supportsUrlContext ?? false,
