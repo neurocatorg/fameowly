@@ -30,7 +30,7 @@ function closestStyle(temperature: number) {
   );
 }
 
-const REASONING_ICONS: Record<ReasoningLevel, string> = { off: "⚡", low: "💭", medium: "🧠", high: "�" };
+const REASONING_ICONS: Record<ReasoningLevel, string> = { off: "⚡", low: "💭", medium: "🧠", high: "\u{1F300}" };
 
 // ─── Props ───────────────────────────────────────────────────────────
 
