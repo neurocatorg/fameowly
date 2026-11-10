@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PROMPT_COMPACT_HEIGHT } from "@/lib/constants/breakpoints";
 
 const KEYBOARD_RATIO = 0.75;
 
@@ -40,5 +41,7 @@ export function useVisualViewport() {
     };
   }, []);
 
-  return { viewportHeight, isKeyboardOpen };
+  const isCompact = isKeyboardOpen || (viewportHeight !== null && viewportHeight < PROMPT_COMPACT_HEIGHT);
+
+  return { viewportHeight, isKeyboardOpen, isCompact };
 }

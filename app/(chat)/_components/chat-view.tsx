@@ -3,78 +3,50 @@
 import { useRef, useState, useCallback } from "react";
 import { ChevronUp } from "lucide-react";
 import { SYSTEM_PROMPT_PRESETS } from "@/lib/constants/system-prompts";
-import type { MessageData, ChatStatus, PendingAttachment, ReasoningLevel } from "@/lib/types";
+import type { MessageData, ChatStatus } from "@/lib/types";
 import { ChatMessage } from "@/components/chat-message/chat-message";
 import { ChatEmptyState } from "./chat-empty-state";
 import { SystemPromptDisplay } from "./system-prompt-display";
 import { ThinkingIndicator } from "./thinking-indicator";
 import { ChatErrorBanner } from "./chat-error-banner";
-import { ChatInput } from "./chat-input";
-import { ModePanel } from "./mode-panel";
+import { ChatComposer, type ChatComposerProps } from "./chat-composer";
 import { useLazyMessages } from "@/hooks/use-lazy-messages";
 import { useSmartScroll } from "@/hooks/use-smart-scroll";
 import { useModePanelVisibility } from "@/hooks/use-mode-panel-visibility";
 
-interface ChatViewProps {
+interface ChatViewProps extends ChatComposerProps {
   messages: MessageData[];
   status: ChatStatus;
   error: string | null;
   chatSystemPrompt: string | undefined;
-  isLoading: boolean;
   isReasoningPhase: boolean;
-  input: string;
-  onInputChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onStop: () => void;
   onDeleteMessage: (messageId: string) => void;
   onRetry: () => void;
   onDeleteLastExchange: () => void;
   onUpdateSystemPrompt: (prompt: string) => void;
-  pendingAttachments: PendingAttachment[];
-  onAddFiles: (files: FileList | File[]) => void;
-  onRemoveAttachment: (idx: number) => void;
-  onRetryAttachment?: (idx: number) => void;
   selectedPresetId: string;
   onSelectPreset: (id: string) => void;
   customSystemPrompt: string;
   onCustomPromptChange: (value: string) => void;
   showSystemPromptPanel: boolean;
   onShowPanelChange: (show: boolean) => void;
-  supportsTemperature: boolean;
-  reasoningLevels: readonly ReasoningLevel[];
-  reasoningLevel: ReasoningLevel | undefined;
-  onReasoningLevelChange: (level: ReasoningLevel) => void;
-  temperature: number;
-  onTemperatureChange: (value: number) => void;
-  supportsWebSearch: boolean;
-  webSearchEnabled: boolean;
-  onWebSearchToggle: () => void;
-  modelUnavailable?: boolean;
-  isKeyboardOpen: boolean;
   chatId: string | null;
 }
 export function ChatView({
-  messages, status, error, chatSystemPrompt,
-  isLoading, isReasoningPhase,
-  input, onInputChange, onSubmit, onStop,
+  messages, status, error, chatSystemPrompt, isReasoningPhase,
   onDeleteMessage, onRetry, onDeleteLastExchange, onUpdateSystemPrompt,
-  pendingAttachments, onAddFiles, onRemoveAttachment, onRetryAttachment,
   selectedPresetId, onSelectPreset, customSystemPrompt, onCustomPromptChange,
   showSystemPromptPanel, onShowPanelChange,
-  supportsTemperature,
-  reasoningLevels, reasoningLevel, onReasoningLevelChange,
-  temperature, onTemperatureChange,
-  supportsWebSearch, webSearchEnabled, onWebSearchToggle,
-  modelUnavailable,
-  isKeyboardOpen,
   chatId,
+  ...composer
 }: ChatViewProps) {
   const isStreaming = status === "streaming" || status === "submitted";
   const prevVisibleCountRef = useRef(0);
   const [inputFocused, setInputFocused] = useState(false);
 
   // Input is "active" when user is preparing a prompt
-  const inputActive = inputFocused || input.trim().length > 0 || pendingAttachments.length > 0;
+  const inputActive =
+    inputFocused || composer.input.trim().length > 0 || composer.pendingAttachments.length > 0;
 
   // Task 1: Lazy messages (reverse infinite scroll)
   const { visibleMessages, hasMore, loadMore } = useLazyMessages({ messages });
@@ -161,7 +133,7 @@ export function ChatView({
 
           {showThinking && <ThinkingIndicator />}
 
-          {error && !isLoading && (
+          {error && !composer.isLoading && (
             <ChatErrorBanner
               error={error}
               onRetry={onRetry}
@@ -175,36 +147,7 @@ export function ChatView({
         </div>
       </div>
 
-      {/* Input area with floating mode panel */}
-      <div className="relative shrink-0">
-        <ModePanel
-          isVisible={isPanelVisible}
-          isKeyboardOpen={isKeyboardOpen}
-          supportsTemperature={supportsTemperature}
-          reasoningLevels={reasoningLevels}
-          reasoningLevel={reasoningLevel}
-          onReasoningLevelChange={onReasoningLevelChange}
-          temperature={temperature}
-          onTemperatureChange={onTemperatureChange}
-          supportsWebSearch={supportsWebSearch}
-          webSearchEnabled={webSearchEnabled}
-          onWebSearchToggle={onWebSearchToggle}
-        />
-        <ChatInput
-          input={input}
-          onInputChange={onInputChange}
-          onSubmit={onSubmit}
-          onStop={onStop}
-          isLoading={isLoading}
-          disabled={modelUnavailable}
-          disabledPlaceholder="Выберите новую модель для продолжения общения"
-          pendingAttachments={pendingAttachments}
-          onAddFiles={onAddFiles}
-          onRemoveAttachment={onRemoveAttachment}
-          onRetryAttachment={onRetryAttachment}
-          onFocusChange={setInputFocused}
-        />
-      </div>
+      <ChatComposer {...composer} isPanelVisible={isPanelVisible} onFocusChange={setInputFocused} />
     </>
   );
 }

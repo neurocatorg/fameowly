@@ -89,9 +89,11 @@ test.describe("Mobile layout 375x667", () => {
     const box = (await island.boundingBox())!;
     expect(box.y).toBeGreaterThanOrEqual(0);
     expect(box.y + box.height).toBeLessThanOrEqual(MOBILE.height);
-    expect(await elementTestIdAt(page, box.x + box.width / 2, box.y + box.height / 2)).toBe(
-      "chat-input-island",
-    );
+    const hitInsideIsland = await page.evaluate(([px, py]) => {
+      const el = document.elementFromPoint(px, py);
+      return !!el?.closest('[data-testid="chat-input-island"]');
+    }, [box.x + box.width / 2, box.y + box.height / 2] as const);
+    expect(hitInsideIsland).toBe(true);
   });
 
   test("reload button stays out of the browser tab", async ({ page }) => {

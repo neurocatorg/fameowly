@@ -10,3 +10,9 @@ export const MOBILE_MEDIA_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
  * on tall phones too.
  */
 export const SIDEBAR_COMPACT_HEIGHT = 800;
+
+/**
+ * Below this visual viewport height the prompt area and its option chips drop
+ * spare paddings. Covers a phone keyboard on both iOS and Android.
+ */
+export const PROMPT_COMPACT_HEIGHT = 500;
