@@ -10,6 +10,7 @@ import { ImageEmptyState } from "./image-empty-state";
 import { ImageComposer } from "./image-composer";
 
 interface ImageViewProps {
+  modelId: string;
   selectedItem: ImageHistoryItemClient | null;
   imageLoading: boolean;
   imageError: string;
@@ -33,7 +34,7 @@ interface ImageViewProps {
 
 /** Image mode orchestrator — result, empty state, input, modals */
 export function ImageView({
-  selectedItem, imageLoading, imageError,
+  modelId, selectedItem, imageLoading, imageError,
   imagePrompt, onPromptChange, onGenerate, onDelete, onNewGeneration,
   refAttachments, onAddRefFiles, onRemoveRefAttachment, imageOptions,
   previewImage, onPreviewChange, confirmDeleteId, onConfirmDeleteChange,
@@ -69,6 +70,7 @@ export function ImageView({
       {/* Input — only in generation mode */}
       {!selectedItem && (
         <ImageComposer
+          modelId={modelId}
           prompt={imagePrompt}
           onPromptChange={onPromptChange}
           onSubmit={onGenerate}

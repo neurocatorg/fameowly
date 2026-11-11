@@ -23,6 +23,8 @@ for (const viewport of [MOBILE, MOBILE_TALL, DESKTOP]) {
 
     test.beforeEach(async ({ page }) => {
       await loginAsAdmin(page);
+      // A plugin estimate in the island appears after its prices load and narrows the text room
+      await page.waitForLoadState("networkidle");
     });
 
     test("one row while the text fits, two rows when it does not, back when cleared", async ({ page }) => {

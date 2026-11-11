@@ -10,7 +10,13 @@ import type { TokenUsage } from "../types";
 export interface ChatFinishContext {
   userId: string;
   modelId: string;
+  /** Billed tokens, summed over every step of the request */
   usage: TokenUsage;
+  /**
+   * What the chat holds after this exchange: the first step's prompt plus the final
+   * answer, without tool results of intermediate steps. Absent = same as `usage`.
+   */
+  contextUsage?: TokenUsage;
   chatId?: string;
   /** Id of the user message that triggered the request */
   userMessageId?: string;
@@ -20,10 +26,17 @@ export interface ChatFinishContext {
   webSearchQueries?: number;
 }
 
+export interface ImageFinishDetails {
+  /** Requested size: "1K" | "2K" | "4K"; absent for providers without sizes */
+  imageSize?: string;
+  /** Billable Google Search queries the model executed */
+  webSearchQueries?: number;
+}
+
 export interface UsageTracker {
   /** Called after a chat generation completes */
   onChatFinish(context: ChatFinishContext): Promise<void>;
 
   /** Called after an image generation completes */
-  onImageFinish(userId: string, modelId: string): Promise<void>;
+  onImageFinish(userId: string, modelId: string, details?: ImageFinishDetails): Promise<void>;
 }

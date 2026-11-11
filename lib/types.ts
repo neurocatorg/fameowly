@@ -3,7 +3,7 @@
 // Server types re-exported for convenience.
 // IMPORTANT: use `export type` to ensure tree-shaking —
 // these modules import `fs`/`path` which must NOT be bundled into client code.
-export type { ModelOption, ModelsConfig, ModelTier, ReasoningLevel } from "./models";
+export type { ModelOption, ModelsConfig, ModelTier, ReasoningLevel, ImageSize } from "./models";
 export type {
   ChatListItem,
   ChatAttachment,

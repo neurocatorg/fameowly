@@ -14,7 +14,8 @@ export function mailMark(): number {
 const CODE_RE = /(\d{4}) (\d{4})/;
 
 async function codeFromLog(email: string, since: number): Promise<string | null> {
-  const log = fs.readFileSync(SERVER_LOG as string, "utf-8").slice(since);
+  // `since` is a byte offset; Cyrillic in the log makes it differ from a string index
+  const log = fs.readFileSync(SERVER_LOG as string).subarray(since).toString("utf-8");
   const at = log.lastIndexOf(`[mail] to=${email} `);
   const match = at >= 0 ? CODE_RE.exec(log.slice(at)) : null;
   return match ? match[1] + match[2] : null;

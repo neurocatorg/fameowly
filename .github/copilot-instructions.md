@@ -126,8 +126,10 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   flash only) is not wired: unverified (quota 429) and its Search Suggestions are mandatory.
   Grounding goes to `ImageHistoryItem.grounding` without `suggestions` (they expire); the live
   response carries them, and `ImageResult` shows `GroundingPanel`. Image defaults: «Сразу», search off.
-  It bypasses `webToolsProvider`: the route calls Gemini REST directly. Usage/billing does not see
-  thinking tokens or search queries yet (`usageTracker.onImageFinish(userId, modelId)`).
+  It bypasses `webToolsProvider`: the route calls Gemini REST directly. Billing gets
+  `usageTracker.onImageFinish(userId, modelId, { imageSize, webSearchQueries })`: the price of the requested size
+  (`ModelOption.pricePerImageBySize`, else `pricePerImage`) plus `pricePerSearchQuery` per Google query; image
+  thinking tokens are not billed (~1.5k tokens, under 1 % of the image price).
 - **Web tools**: two mechanisms behind one `webToolsProvider` slot. `resolve()` returns
   `tools` for `streamText()` — provider-native for Google/Vertex (they share the same tool
   factories: `@ai-sdk/google-vertex` re-exports them from `@ai-sdk/google`, so one OSS strategy
@@ -135,6 +137,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `supportsToolCalling` (llama.cpp needs `--jinja`). Executed tools run as a multi-step loop:
   optional `maxSteps()` → `stopWhen: stepCountIs(n)`, the last step runs without tools and
   with an "answer now" note; tool budgets, not the step cap, are what stop the model.
+  The usage tracker gets `totalUsage` (every step) as `usage` — that is what is billed — and, for multi-step
+  answers, `contextUsage` = first step's prompt + final answer (what stays in the chat; `lib/chat/finish-usage.ts`).
   `lib/chat/stream-grounding.ts` merges grounding from pre-fetch, tool results and Google
   metadata. Optional `prepareContext()` pre-fetches **pasted links only** (there is no
   pre-fetched search); the route always calls it and `lib/chat/apply-web-context.ts` puts
@@ -186,7 +190,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   Same textarea element in both layouts (CSS grid areas), so focus and the phone keyboard survive.
   Text height is capped at `min(200, 30% of the visual viewport)`; below `PROMPT_COMPACT_HEIGHT`
   (keyboard up) the island and chips drop spare paddings. Enter always adds a line; sending is the
-  button only. `estimate` is an empty slot for now (cost estimate comes later).
+  button only. `estimate` hosts the `prompt-estimate` plugin slot and `bottom` the `prompt-footer` slot, which the
+  composers drop while `isCompact`; without plugins both stay empty.
 - **Plugin System**: optional features are implemented as plugins in the `extensions/` submodule.
   Behaviour is overridden through the DI container; core routes resolve strategies
   via `container.get(...)`. Admin UI loads plugin tabs from `/api/plugins/capabilities`.
@@ -225,7 +230,11 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `/profile` hosts `profile-balance`, `profile-preferences` and `profile-payments`; empty chat and image screens host
   `chat-empty-notice`; the app hosts `payment-required` and `onboarding` (state behind the
   delegated `/api/onboarding`); `/` hosts `access-gate`; the sidebar footer hosts `sidebar-menu`
-  (entries styled with `components/sidebar/footer-classes.ts`).
+  (entries styled with `components/sidebar/footer-classes.ts`); the prompt island hosts `prompt-estimate`
+  (price of the next request, left of [→]) and `prompt-footer` (line under the island, hidden while `isCompact`).
+  The header keeps `header-account`, which billing no longer fills (balance lives in `prompt-footer`).
+  Billing computes the estimate on the client from `GET /api/balance?prices=1` (the user's marked-up prices +
+  estimate parameters from the admin «Баланс» tab, `settings/billing.estimate`).
 - **Plugin Bridge**: `lib/plugins.ts` loads the registry from `@plugins` and exposes
   `adminTabs` / `uiSlots` / `apiRoutes`. When the submodule is absent, `lib/plugin-stub.ts`
   supplies an empty plugins array.

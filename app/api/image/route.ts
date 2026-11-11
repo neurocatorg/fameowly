@@ -9,7 +9,7 @@ import { proxyFetch } from "@/lib/proxy-fetch";
 import { storeGeneratedImage } from "@/lib/generated-image";
 import { ASPECT_RATIOS, RESOLUTIONS } from "@/lib/constants/image-options";
 import { imageRequestExtras } from "@/lib/image-generation-options";
-import { extractGrounding } from "@/lib/web-tools/grounding";
+import { extractGrounding, countSearchQueries } from "@/lib/web-tools/grounding";
 import { resolveFileUrl } from "@/lib/file-storage";
 import { getVertexAccessToken } from "@/lib/providers/vertex-auth";
 import {
@@ -263,15 +263,18 @@ export async function POST(req: NextRequest) {
           (p: Record<string, unknown>) => typeof p.text === "string"
         );
         const description = textPart?.text || undefined;
-        const grounding = extractGrounding({ vertex: { groundingMetadata: data?.candidates?.[0]?.groundingMetadata } });
+        const metadata = { vertex: { groundingMetadata: data?.candidates?.[0]?.groundingMetadata } };
+        const grounding = extractGrounding(metadata);
         if (grounding) {
           // Search Suggestions are shown with this response only: their redirect URLs expire
           historyItem.grounding = { queries: grounding.queries, sources: grounding.sources };
         }
 
         await addImageHistoryItem(userId, historyItem);
-        container.get("usageTracker").onImageFinish(userId, modelId)
-          .catch((err) => console.error("[usage-tracker] image finish error:", err));
+        container.get("usageTracker").onImageFinish(userId, modelId, {
+          ...(imageConfig.imageSize ? { imageSize: imageConfig.imageSize } : {}),
+          webSearchQueries: countSearchQueries(metadata),
+        }).catch((err) => console.error("[usage-tracker] image finish error:", err));
         return NextResponse.json({ imageUrl, description, historyItem: { ...historyItem, grounding } });
       }
 

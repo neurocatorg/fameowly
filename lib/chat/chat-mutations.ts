@@ -66,7 +66,8 @@ export function removeFromChat(chat: ChatSession, messageId: string): void {
 export function addUsageToChat(
   chat: ChatSession,
   usage: { promptTokens: number; completionTokens: number },
-  webSearchQueries: number
+  webSearchQueries: number,
+  contextUsage: { promptTokens: number; completionTokens: number } = usage
 ): void {
   const totals = chat.usage;
   chat.usage = {
@@ -74,7 +75,7 @@ export function addUsageToChat(
     completionTokens: (totals?.completionTokens ?? 0) + usage.completionTokens,
     requests: (totals?.requests ?? 0) + 1,
     webSearchQueries: (totals?.webSearchQueries ?? 0) + webSearchQueries,
-    contextTokens: usage.promptTokens + usage.completionTokens,
+    contextTokens: contextUsage.promptTokens + contextUsage.completionTokens,
     contextRevision: chat.revision ?? 0,
   };
 }

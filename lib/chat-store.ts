@@ -151,9 +151,10 @@ export async function recordChatUsage(
   userId: string,
   chatId: string,
   usage: { promptTokens: number; completionTokens: number },
-  webSearchQueries = 0
+  webSearchQueries = 0,
+  contextUsage: { promptTokens: number; completionTokens: number } = usage
 ): Promise<void> {
-  await modifyChat(userId, chatId, (chat) => addUsageToChat(chat, usage, webSearchQueries));
+  await modifyChat(userId, chatId, (chat) => addUsageToChat(chat, usage, webSearchQueries, contextUsage));
 }
 
 /** Delete a chat session */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import { ChevronUp } from "lucide-react";
 import { SYSTEM_PROMPT_PRESETS } from "@/lib/constants/system-prompts";
 import type { MessageData, ChatStatus } from "@/lib/types";
@@ -76,6 +76,7 @@ export function ChatView({
   prevVisibleCountRef.current = visibleMessages.length;
 
   const showThinking = status === "submitted" && messages[messages.length - 1]?.role !== "assistant";
+  const historyChars = useMemo(() => messages.reduce((sum, m) => sum + m.content.length, 0), [messages]);
 
   return (
     <>
@@ -147,7 +148,14 @@ export function ChatView({
         </div>
       </div>
 
-      <ChatComposer {...composer} isPanelVisible={isPanelVisible} onFocusChange={setInputFocused} />
+      <ChatComposer
+        {...composer}
+        chatId={chatId}
+        status={status}
+        historyChars={historyChars}
+        isPanelVisible={isPanelVisible}
+        onFocusChange={setInputFocused}
+      />
     </>
   );
 }

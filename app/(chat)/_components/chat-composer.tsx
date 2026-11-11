@@ -1,12 +1,14 @@
 "use client";
 
-import type { PendingAttachment, ReasoningLevel } from "@/lib/types";
+import type { ChatStatus, PendingAttachment, ReasoningLevel } from "@/lib/types";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
+import { PluginSlot } from "@/lib/plugin-ui";
 import { PromptIsland } from "@/components/prompt-island/prompt-island";
 import { AttachmentStrip } from "@/components/prompt-island/attachment-strip";
 import { ModePanel } from "./mode-panel";
 
 export interface ChatComposerProps {
+  modelId: string;
   input: string;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -29,17 +31,34 @@ export interface ChatComposerProps {
 }
 
 interface Props extends ChatComposerProps {
+  chatId: string | null;
+  status: ChatStatus;
+  /** Text length of the loaded history, for the estimate of a chat with no measured context */
+  historyChars: number;
   isPanelVisible: boolean;
   onFocusChange: (focused: boolean) => void;
 }
 
 /** Chat answer options, pending files and the prompt island */
 export function ChatComposer({
-  input, onInputChange, onSubmit, onStop, isLoading, modelUnavailable,
+  modelId, input, onInputChange, onSubmit, onStop, isLoading, modelUnavailable,
   pendingAttachments, onAddFiles, onRemoveAttachment, onRetryAttachment,
-  isPanelVisible, onFocusChange, ...options
+  chatId, status, historyChars, isPanelVisible, onFocusChange, ...options
 }: Props) {
   const { isCompact } = useVisualViewport();
+  const estimate = {
+    mode: "chat",
+    modelId,
+    chatId,
+    status,
+    text: input,
+    attachments: pendingAttachments
+      .filter((a) => !a.error)
+      .map((a) => ({ mimeType: a.file.type, size: a.file.size })),
+    reasoningLevel: options.reasoningLevel,
+    webSearch: options.supportsWebSearch && options.webSearchEnabled,
+    historyChars,
+  };
   return (
     <div className="relative shrink-0">
       <ModePanel isVisible={isPanelVisible} compact={isCompact} {...options} />
@@ -55,6 +74,7 @@ export function ChatComposer({
         onAddFiles={onAddFiles}
         onFocusChange={onFocusChange}
         submitTitle="Отправить"
+        estimate={!modelUnavailable && <PluginSlot id="prompt-estimate" props={estimate} />}
         top={
           <AttachmentStrip
             attachments={pendingAttachments}
@@ -62,6 +82,7 @@ export function ChatComposer({
             onRetry={onRetryAttachment}
           />
         }
+        bottom={!isCompact && <PluginSlot id="prompt-footer" props={{ mode: "chat", chatId, status }} />}
         testId="chat-input-island"
       />
     </div>
