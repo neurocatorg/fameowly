@@ -81,6 +81,7 @@ function ChatPage() {
         <ChatErrorBoundary>
           {s.mode === "chat" && (
             <ChatView
+              modelId={s.selectedModel.id}
               messages={s.messages}
               status={s.status}
               error={s.error}
@@ -121,6 +122,7 @@ function ChatPage() {
 
           {s.mode === "image" && (
             <ImageView
+              modelId={s.selectedImageModel.id}
               selectedItem={s.selectedImageItem}
               imageLoading={s.imageLoading}
               imageError={s.imageError}

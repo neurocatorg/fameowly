@@ -26,10 +26,17 @@ export interface ChatFinishContext {
   webSearchQueries?: number;
 }
 
+export interface ImageFinishDetails {
+  /** Requested size: "1K" | "2K" | "4K"; absent for providers without sizes */
+  imageSize?: string;
+  /** Billable Google Search queries the model executed */
+  webSearchQueries?: number;
+}
+
 export interface UsageTracker {
   /** Called after a chat generation completes */
   onChatFinish(context: ChatFinishContext): Promise<void>;
 
   /** Called after an image generation completes */
-  onImageFinish(userId: string, modelId: string): Promise<void>;
+  onImageFinish(userId: string, modelId: string, details?: ImageFinishDetails): Promise<void>;
 }

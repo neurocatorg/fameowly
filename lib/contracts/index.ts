@@ -5,8 +5,8 @@
 
 export type { ProviderResolver } from "./credential-resolver";
 export type { ModelFactory } from "./model-factory";
-export type { UsageTracker, ChatFinishContext } from "./usage-tracker";
-export type { PricingPolicy, CostSnapshot } from "./pricing-policy";
+export type { UsageTracker, ChatFinishContext, ImageFinishDetails } from "./usage-tracker";
+export type { PricingPolicy, CostSnapshot, ChatCostDetails } from "./pricing-policy";
 export type { ModelAccessPolicy } from "./model-access-policy";
 export type { SpendingGuard } from "./spending-guard";
 export type { UserLifecycle, CreatedUser, UserCreatedContext } from "./user-lifecycle";

@@ -7,6 +7,7 @@
  */
 
 import type { TokenUsage } from "../types";
+import type { ImageFinishDetails } from "./usage-tracker";
 
 export interface CostSnapshot {
   /** Provider cost before markup, in integer micro-USD */
@@ -17,7 +18,17 @@ export interface CostSnapshot {
   markup: number;
 }
 
+export interface ChatCostDetails {
+  /** Billable Google Search queries the model executed */
+  webSearchQueries?: number;
+}
+
 export interface PricingPolicy {
-  chatCost(userId: string, modelId: string, usage: TokenUsage): Promise<CostSnapshot | null>;
-  imageCost(userId: string, modelId: string): Promise<CostSnapshot | null>;
+  chatCost(
+    userId: string,
+    modelId: string,
+    usage: TokenUsage,
+    details?: ChatCostDetails,
+  ): Promise<CostSnapshot | null>;
+  imageCost(userId: string, modelId: string, details?: ImageFinishDetails): Promise<CostSnapshot | null>;
 }

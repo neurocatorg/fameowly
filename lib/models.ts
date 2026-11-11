@@ -5,6 +5,9 @@ export type ModelTier = "basic" | "advanced" | "ultra";
 /** How long a model thinks before answering, from not at all to the deepest */
 export type ReasoningLevel = "off" | "low" | "medium" | "high";
 
+/** Output size of generated images */
+export type ImageSize = "1K" | "2K" | "4K";
+
 export interface ModelOption {
   id: string;
   name: string;
@@ -23,6 +26,10 @@ export interface ModelOption {
   outputPricePer1M?: number;
   /** Provider price in USD per generated image. Undefined = free */
   pricePerImage?: number;
+  /** Provider price in USD per image of a given size; a missing size costs `pricePerImage` */
+  pricePerImageBySize?: Partial<Record<ImageSize, number>>;
+  /** Provider price in USD per Google Search query the model runs. Undefined = free */
+  pricePerSearchQuery?: number;
   /** @deprecated migrated into `inputPricePer1M` / `outputPricePer1M` on read */
   pricePer1MTokens?: number;
   /** Defaults to `false`. Without `reasoningLevels` it offers the levels "off" and "high" */

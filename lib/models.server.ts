@@ -100,6 +100,8 @@ export function stripPricingForNonAdmin(
     delete clone.inputPricePer1M;
     delete clone.outputPricePer1M;
     delete clone.pricePerImage;
+    delete clone.pricePerImageBySize;
+    delete clone.pricePerSearchQuery;
     delete clone.pricePer1MTokens;
     return clone;
   };
