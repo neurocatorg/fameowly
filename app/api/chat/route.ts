@@ -4,6 +4,7 @@ import { buildCoreMessages } from "@/lib/chat/build-core-messages";
 import { applyWebContext } from "@/lib/chat/apply-web-context";
 import { createGroundingTracker, countStepSearchQueries } from "@/lib/chat/stream-grounding";
 import { withHeartbeat } from "@/lib/chat/sse-heartbeat";
+import { contextUsageOf, toTokenUsage } from "@/lib/chat/finish-usage";
 import { extractPublicUrls } from "@/lib/web-tools/url-detection";
 import { isArchivedModel, readModelsConfig } from "@/lib/models.server";
 import { requestedReasoningLevel } from "@/lib/reasoning-levels";
@@ -159,17 +160,15 @@ export async function POST(req: Request) {
           }
         : {}),
       ...(providerOptions ? { providerOptions } : {}),
-      onFinish({ usage, steps }) {
-        if (!usage) return;
+      onFinish({ totalUsage, steps }) {
+        if (!totalUsage) return;
         const webSearchQueries = steps.reduce((sum, step) => sum + countStepSearchQueries(step), 0);
+        const contextUsage = contextUsageOf(steps);
         container.get("usageTracker").onChatFinish({
           userId,
           modelId,
-          usage: {
-            promptTokens: usage.inputTokens ?? 0,
-            completionTokens: usage.outputTokens ?? 0,
-            totalTokens: usage.totalTokens ?? 0,
-          },
+          usage: toTokenUsage(totalUsage),
+          ...(contextUsage ? { contextUsage } : {}),
           chatId,
           userMessageId,
           assistantMessageId,
