@@ -13,6 +13,7 @@
  *    low/medium/high and reject "minimal"; `thinkingBudget: 0` stops 3.1-pro but NOT 3.8-flash.
  *  - The Qwen3.8 template takes `reasoning_effort` low/medium/xhigh (default xhigh) and
  *    answers HTTP 500 to "high", so "high" sends nothing and keeps the template default.
+ *  - xAI, 2026-11-12: grok-4.7 answers 400 to `reasoningEffort: "none"`.
  */
 
 import type { ReasoningLevel } from "../types";

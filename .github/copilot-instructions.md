@@ -61,7 +61,8 @@ Self-hosted family AI hub on Next.js 16 with support for multiple LLM providers.
   `@ai-sdk/xai` pinned to the `ai-v6` dist-tag (`latest` targets a newer AI SDK) and
   `xai.responses(modelId)` — the Responses API streams grok-4.x reasoning summaries — with
   `store: false`. `reasoningEffort` takes our levels, "off" = `"none"`; grok-4.7 answers 400 to
-  `"none"` (measured 2026-11-12), so its `reasoningLevels` are `[low, medium, high]`. Images: `/api/image` branches on
+  `"none"` and thinks ~4–7k tokens / ~100 s on a hard task at every level (measured 2026-11-12), so its
+  `reasoningLevels` are `[low]` (no picker). Images: `/api/image` branches on
   `credentials.baseProvider === "xai"` into `lib/providers/xai-image.ts` (`generateImage`,
   `/v1/images/generations`, or `/v1/images/edits` with up to 5 references, JPEG/PNG — others are
   converted). xAI renders 1k/2k only; 4K is upscaled locally. Upstream errors answer 502,
