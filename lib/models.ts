@@ -11,7 +11,7 @@ export type ImageSize = "1K" | "2K" | "4K";
 export interface ModelOption {
   id: string;
   name: string;
-  provider: "google" | "google-vertex" | "openrouter" | "local";
+  provider: "google" | "google-vertex" | "openrouter" | "xai" | "local";
   tier: ModelTier;
   /** Defaults to `true` when provider is "local", `false` otherwise */
   isLocal?: boolean;
@@ -89,6 +89,7 @@ export const PROVIDER_COLORS: Record<ModelOption["provider"], string> = {
   google: "bg-green-400",
   "google-vertex": "bg-sky-400",
   openrouter: "bg-orange-400",
+  xai: "bg-violet-400",
   local: "bg-emerald-400",
 };
 

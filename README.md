@@ -36,7 +36,7 @@ Its main trick: **every outgoing request to an LLM provider can go through a SOC
 
 - **SOCKS5 proxy for provider traffic**: set `SOCKS_PROXY` (or `ALL_PROXY` / `HTTPS_PROXY`) and all provider calls, including streaming, are tunneled through it. Everything else stays on the direct route.
 - **Zero-database**: users, chats and uploads are plain JSON files under `data/`.
-- **Shared keys**: OpenRouter, Google AI Studio and local LLaMA-compatible endpoints are configured once by the host.
+- **Shared keys**: OpenRouter, Google AI Studio, xAI (Grok) and local LLaMA-compatible endpoints are configured once by the host.
 - **Sign-in**: by a one-time code sent to the user's email, or by name/email and password; password recovery by email. Accounts are added by the admin, with an email, a password or both.
 - **Admin panel**: built-in UI for creating users and managing access.
 - **Multimodal**: image and file attachments in chat, plus a dedicated image generation mode.
@@ -77,6 +77,7 @@ ADMIN_INIT_PASS=pick-your-first-admin-password
 
 OPENROUTER_API_KEY=
 GOOGLE_GENERATIVE_AI_API_KEY=
+XAI_API_KEY=
 LOCAL_LLM_URL=http://127.0.0.1:8080/v1
 
 # Route provider traffic through a SOCKS5 proxy
@@ -153,7 +154,7 @@ docker run -d --name searxng-dev -p 127.0.0.1:8888:8080 \
 
 Pages are fetched by the hub itself through an SSRF-hardened client (`lib/web-tools/safe-fetch.ts`): only `http`/`https`, every redirect re-validated, connections pinned to a resolved public IP, loopback and private ranges refused.
 
-`reasoningLevels` sets which thinking depths the user may pick in the «Сколько думать перед ответом» picker: any of `"off"` (Сразу), `"low"` (Быстро), `"medium"` (Вдумчиво), `"high"` (Глубоко). The picker appears with two or more levels; a single level is applied silently. A model without `reasoningLevels` but with `supportsReasoning: true` offers `["off", "high"]`. List only what the provider honours: Google maps the levels to `thinkingConfig.thinkingLevel` and "off" to `thinkingBudget: 0` (gemini-3.1-pro stops thinking, gemini-3.8-flash does not); OpenRouter to `reasoning.effort` / `reasoning.enabled: false`; llama.cpp to `chat_template_kwargs` (`enable_thinking`, `reasoning_effort`), which a server started without `--jinja` silently ignores. Displaying the reasoning block itself does not depend on these settings: it is always on wherever the provider exposes reasoning.
+`reasoningLevels` sets which thinking depths the user may pick in the «Сколько думать перед ответом» picker: any of `"off"` (Сразу), `"low"` (Быстро), `"medium"` (Вдумчиво), `"high"` (Глубоко). The picker appears with two or more levels; a single level is applied silently. A model without `reasoningLevels` but with `supportsReasoning: true` offers `["off", "high"]`. List only what the provider honours: Google maps the levels to `thinkingConfig.thinkingLevel` and "off" to `thinkingBudget: 0` (gemini-3.1-pro stops thinking, gemini-3.8-flash does not); OpenRouter to `reasoning.effort` / `reasoning.enabled: false`; xAI to `reasoningEffort` (grok-4.5+ cannot stop thinking, so leave out `"off"` for them); llama.cpp to `chat_template_kwargs` (`enable_thinking`, `reasoning_effort`), which a server started without `--jinja` silently ignores. Displaying the reasoning block itself does not depend on these settings: it is always on wherever the provider exposes reasoning.
 
 ## Local development
 

@@ -45,6 +45,10 @@ export class DefaultReasoningOptionsProvider implements ReasoningOptionsProvider
           openrouter: { reasoning: level === "off" ? { enabled: false } : { effort: level } },
         };
 
+      case "xai":
+        if (!level) return undefined;
+        return { xai: { reasoningEffort: level === "off" ? "none" : level } };
+
       case "local":
         if (level === "off") return { local: { chat_template_kwargs: { enable_thinking: false } } };
         if (level === "low" || level === "medium") {

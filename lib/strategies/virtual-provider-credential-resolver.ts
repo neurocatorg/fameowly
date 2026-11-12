@@ -104,6 +104,11 @@ export class VirtualProviderCredentialResolver implements ProviderResolver {
           apiKey: process.env.OPENROUTER_API_KEY ?? "",
           baseURL: "https://openrouter.ai/api/v1",
         };
+      case "xai":
+        return {
+          baseProvider: "xai",
+          apiKey: process.env.XAI_API_KEY ?? "",
+        };
       case "local":
         return {
           baseProvider: "local",

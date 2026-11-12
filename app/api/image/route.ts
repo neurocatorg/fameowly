@@ -12,6 +12,7 @@ import { imageRequestExtras } from "@/lib/image-generation-options";
 import { extractGrounding, countSearchQueries } from "@/lib/web-tools/grounding";
 import { resolveFileUrl } from "@/lib/file-storage";
 import { getVertexAccessToken } from "@/lib/providers/vertex-auth";
+import { generateXaiImage, XaiImageInputError } from "@/lib/providers/xai-image";
 import {
   addImageHistoryItem,
   saveGeneratedImage,
@@ -297,6 +298,42 @@ export async function POST(req: NextRequest) {
         { error: "Модель не вернула изображение", historyItem },
         { status: 500 }
       );
+    }
+
+    if (credentials.baseProvider === "xai") {
+      const upstreamStartedAt = Date.now();
+      try {
+        const result = await generateXaiImage({
+          credentials,
+          modelId,
+          prompt,
+          referenceUrls: (refFilesForHistory ?? []).map((f) => f.url),
+          aspectRatio: ASPECT_RATIOS.some((a) => a.id === aspectRatio) ? aspectRatio : undefined,
+          resolution,
+        });
+        const upstreamMs = Date.now() - upstreamStartedAt;
+        const stored = await storeGeneratedImage(result.base64, result.mimeType, targetLongestSide);
+        historyItem.imageUrl = stored.imageUrl;
+        console.log(
+          `[image] user=${userId} model=${modelId} size=${historyItem.resolution} ar=${historyItem.aspectRatio}` +
+            ` refs=${refFilesForHistory?.length ?? 0} upstream=${upstreamMs}ms resize=${stored.resizeMs}ms` +
+            ` out=${stored.width}x${stored.height}${stored.upscaled ? "(upscaled)" : ""}` +
+            ` bytes=${stored.bytes} total=${Date.now() - startedAt}ms`
+        );
+        await addImageHistoryItem(userId, historyItem);
+        container.get("usageTracker").onImageFinish(userId, modelId, {
+          ...(RESOLUTIONS.some((r) => r.id === resolution) ? { imageSize: resolution } : {}),
+        }).catch((err) => console.error("[usage-tracker] image finish error:", err));
+        return NextResponse.json({ imageUrl: stored.imageUrl, historyItem });
+      } catch (err) {
+        console.error(`xAI image generation error (${Date.now() - upstreamStartedAt}ms, ${modelId}):`, err);
+        // Never pass upstream 401/402 through: the client reads them as our own session and balance
+        const status = err instanceof XaiImageInputError ? 400 : 502;
+        const errorMsg = err instanceof Error ? err.message : "Ошибка генерации изображения";
+        historyItem.error = errorMsg;
+        await addImageHistoryItem(userId, historyItem);
+        return NextResponse.json({ error: errorMsg, historyItem }, { status });
+      }
     }
 
     // Fallback: OpenRouter

@@ -69,7 +69,7 @@ export interface ImageHistoryItemClient {
 // ─── Virtual Provider types ──────────────────────────────────────────
 
 /** Base provider type (physical provider) */
-export type BaseProvider = "google" | "google-vertex" | "openrouter" | "local";
+export type BaseProvider = "google" | "google-vertex" | "openrouter" | "xai" | "local";
 
 /** Key group — a set of keys/endpoints assigned to a user role */
 export interface KeyGroup {

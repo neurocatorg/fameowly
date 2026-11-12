@@ -5,6 +5,7 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createXai } from "@ai-sdk/xai";
 import { extractReasoningMiddleware, defaultSettingsMiddleware, wrapLanguageModel } from "ai";
 import { proxyFetch } from "../proxy-fetch";
 import { buildVertexProviderOptions } from "../providers/vertex-auth";
@@ -52,6 +53,21 @@ export class BaseModelFactory implements ModelFactory {
           includeUsage: true,
         });
         return openrouter.chatModel(modelId);
+      }
+      case "xai": {
+        // Responses API: only it streams grok-4.x reasoning summaries.
+        const xai = createXai({
+          apiKey: credentials.apiKey,
+          baseURL: credentials.baseURL,
+          fetch: proxyFetch,
+        });
+        return wrapLanguageModel({
+          model: xai.responses(modelId),
+          // The hub keeps the history itself; xAI need not store conversations.
+          middleware: defaultSettingsMiddleware({
+            settings: { providerOptions: { xai: { store: false } } },
+          }),
+        });
       }
       case "local": {
         // No proxyFetch: local endpoints live on the LAN, a SOCKS proxy would not reach them.
